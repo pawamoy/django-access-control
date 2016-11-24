@@ -1,7 +1,7 @@
 # This file exists so you can easily regenerate your project.
 #
 # `cookiepatcher` is a convenient shim around `cookiecutter`
-# for regenerating projects (it will generate a .cookiecutterrc 
+# for regenerating projects (it will generate a .cookiecutterrc
 # automatically for any template). To use it:
 #
 #    pip install cookiepatcher
@@ -17,9 +17,6 @@
 default_context:
 
     appveyor:                  'no'
-    c_extension_cython:        'no'
-    c_extension_optional:      'no'
-    c_extension_support:       'no'
     codacy:                    'no'
     codeclimate:               'no'
     codecov:                   'yes'
@@ -27,24 +24,24 @@ default_context:
     command_line_interface_bin_name: 'django-access-control'
     coveralls:                 'no'
     distribution_name:         'django-access-control'
+    django_versions:           '1.8,1.9,1.10'
     email:                     'timothee.mazzucotelli@gmail.com'
     full_name:                 'Timothee Mazzucotelli'
     github_username:           'Pawamoy'
+    gitter:                    'yes'
     landscape:                 'yes'
-    license:                   'MPL 2.0'
     package_name:              'accesscontrol'
     project_name:              'Django Access Control'
     project_short_description: 'Control how users access resources in your Django project.'
+    pyup:                      'yes'
     release_date:              'today'
     repo_name:                 'django-access-control'
     requiresio:                'no'
     scrutinizer:               'no'
     sphinx_doctest:            'no'
-    sphinx_theme:              'sphinx-rtd-theme'
-    test_matrix_configurator:  'no'
-    test_matrix_separate_coverage: 'no'
-    test_runner:               'pytest'
+    sphinx_theme:              'sphinx-py3doc-enhanced-theme'
     travis:                    'yes'
+    use_django:                'yes'
     version:                   '0.1.0'
     website:                   'http://pawamoy.github.io/'
     year:                      'now'

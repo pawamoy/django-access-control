@@ -8,9 +8,10 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
+from . import ACCESS_CONTROL_PERMISSION as Permission
 from . import (
-    ACCESS_CONTROL_MODELS, ACCESS_CONTROL_PERMISSION as Permission, allowed, denied,
-    ACCESS_CONTROL_IMPLICIT, ACCESS_CONTROL_DEFAULT_RESPONSE, ACCESS_APP_LABEL)
+    ACCESS_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE, ACCESS_CONTROL_IMPLICIT,
+    ACCESS_CONTROL_MODELS, allowed, denied)
 
 
 class Access(models.Model):
@@ -197,5 +198,6 @@ def _auto_build_models(model_list):
                 model['access'] = access
             built.append(model)
     return built
+
 
 auto_built = _auto_build_models(ACCESS_CONTROL_MODELS)

@@ -15,6 +15,11 @@ include CONTRIBUTING.rst
 include LICENSE
 include README.rst
 
-include tox.ini .travis.yml .landscape.yml
+include tox.ini
+
+include *.yml
+include runtests.py
+
+recursive-include requirements *.txt
 
 global-exclude *.py[cod] __pycache__ *.so *.dylib release.sh

@@ -2,7 +2,7 @@
 
 from django.conf import settings
 
-from .permission import Permission, is_denied, is_allowed, allowed, denied
+from .permission import Permission, allowed, denied, is_allowed, is_denied
 
 __version__ = "0.1.0"
 
@@ -47,5 +47,3 @@ def deny(user, perm, resource):
 
 def forget(user, perm, resource):
     return ACCESS_CONTROL_MODELS.get(resource.__class__).forget(user, perm, resource)
-
-

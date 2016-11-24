@@ -2,7 +2,7 @@
 
 from django.contrib.auth import get_user_model
 
-from . import ACCESS_CONTROL_MODELS, is_denied, is_allowed
+from . import ACCESS_CONTROL_MODELS, is_allowed, is_denied
 
 
 class DSM(object):
