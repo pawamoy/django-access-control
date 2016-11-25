@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from . import (
-    ACCESS_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE, ACCESS_CONTROL_IMPLICIT,
+    ACCESS_CONTROL_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE, ACCESS_CONTROL_IMPLICIT,
     ACCESS_CONTROL_PERMISSION, DummyAttempt, allowed, denied)
 
 
@@ -24,7 +24,7 @@ class Access(models.Model):
 
     class Meta:
         abstract = True
-        app_label = ACCESS_APP_LABEL
+        app_label = ACCESS_CONTROL_APP_LABEL
         unique_together = ('usr', 'res', 'val')
 
     def __str__(self):
@@ -124,6 +124,7 @@ class AccessAttempt(models.Model):
 
     class Meta:
         abstract = True
+        app_label = ACCESS_CONTROL_APP_LABEL
 
     def __str__(self):
         return '[%s] user %s was %s %s to %s %s %s' % (

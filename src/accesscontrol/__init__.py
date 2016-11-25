@@ -8,15 +8,15 @@ from .permission import Permission, allowed, denied, is_allowed, is_denied
 
 __version__ = "0.1.0"
 
-ACCESS_APP_LABEL = getattr(settings, 'ACCESS_APP_LABEL', 'accesscontrol')
+ACCESS_CONTROL_APP_LABEL = getattr(settings, 'ACCESS_CONTROL_APP_LABEL', 'accesscontrol')
 ACCESS_CONTROL_PERMISSION = getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS', Permission)
 ACCESS_CONTROL_IMPLICIT = getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
 ACCESS_CONTROL_DEFAULT_RESPONSE = getattr(settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
 
-allowed = getattr(settings, 'ACCESS_ALLOWED', allowed)
-denied = getattr(settings, 'ACCESS_DENIED', denied)
-is_allowed = getattr(settings, 'ACCESS_IS_ALLOWED', is_allowed)
-is_denied = getattr(settings, 'ACCESS_IS_DENIED', is_denied)
+allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
+denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
+is_allowed = getattr(settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
+is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
 
 if isinstance(ACCESS_CONTROL_PERMISSION, str):
     ACCESS_CONTROL_PERMISSION = importlib.import_module(ACCESS_CONTROL_PERMISSION)
