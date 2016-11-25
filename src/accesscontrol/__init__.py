@@ -6,7 +6,7 @@ from django.conf import settings
 
 from .permission import Permission, allowed, denied, is_allowed, is_denied
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 ACCESS_CONTROL_APP_LABEL = getattr(settings, 'ACCESS_CONTROL_APP_LABEL', 'accesscontrol')
 ACCESS_CONTROL_PERMISSION = getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS', Permission)
