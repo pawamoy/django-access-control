@@ -2,17 +2,13 @@
 
 from django.contrib.auth import get_user_model
 
-from . import ACCESS_CONTROL_MODELS, is_allowed, is_denied
+from . import is_allowed, is_denied
 
 
 class DSM(object):
-    def __init__(self, model):
+    def __init__(self, model, access_model):
         self.model = model
-        access_model = ACCESS_CONTROL_MODELS.get(model, None)
-        if access_model:
-            self.access_model = access_model
-        else:
-            raise NotImplementedError('No access model for model %s' % model)
+        self.access_model = access_model
 
         self.data = None
         self.size_x = 0
@@ -45,8 +41,8 @@ class DSM(object):
         for order in orders:
             objects = objects.order_by(order)
 
-        self.size_x = objects.distinct(x).count()
-        self.size_y = objects.distinct(y).count()
+        self.size_x = objects.values(x).distinct().count()
+        self.size_y = objects.values(y).distinct().count()
 
         matrix_data = [[[] for _x in range(self.size_x)]
                        for _y in range(self.size_y)]

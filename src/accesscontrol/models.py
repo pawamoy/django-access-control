@@ -2,16 +2,14 @@
 
 from __future__ import unicode_literals
 
-from django.apps import apps
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
-from . import ACCESS_CONTROL_PERMISSION as Permission
 from . import (
     ACCESS_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE, ACCESS_CONTROL_IMPLICIT,
-    ACCESS_CONTROL_MODELS, allowed, denied)
+    ACCESS_CONTROL_PERMISSION, DummyAttempt, allowed, denied)
 
 
 class Access(models.Model):
@@ -21,7 +19,8 @@ class Access(models.Model):
     usr = models.PositiveIntegerField(_('User ID'))
     res = models.PositiveIntegerField(_('Resource ID'), blank=True, null=True)
     val = models.CharField(
-        verbose_name=_('Permission'), max_length=30, choices=Permission.CHOICES_ALLOW_DENY)
+        verbose_name=_('Permission'), max_length=30,
+        choices=ACCESS_CONTROL_PERMISSION.CHOICES_ALLOW_DENY)
 
     class Meta:
         abstract = True
@@ -43,14 +42,8 @@ class Access(models.Model):
         return user_id, resource_id
 
     @classmethod
-    def authorize(cls, user, perm, resource=None, save=True):
+    def authorize(cls, user, perm, resource=None, save=True, attempt_model=DummyAttempt):
         user_id, resource_id = Access._user_resource_id(user, resource)
-
-        attempt_model = cls.attempt_model
-        if attempt_model is None:
-            attempt_model = apps.get_model(ACCESS_APP_LABEL, '%sAttempt' % cls.__name__)
-        elif isinstance(attempt_model, str):
-            attempt_model = apps.get_model(ACCESS_APP_LABEL, attempt_model)
 
         attempt = attempt_model(usr=user_id, res=resource_id, val=perm)
 
@@ -71,7 +64,7 @@ class Access(models.Model):
             attempt.response = False
 
         elif ACCESS_CONTROL_IMPLICIT:
-            attempt.response = cls.authorize_implicit(user, perm, resource)
+            attempt.response = cls.authorize_implicit(user_id, perm, resource_id)
             attempt.implicit = True
         else:
             attempt.response = ACCESS_CONTROL_DEFAULT_RESPONSE
@@ -83,7 +76,13 @@ class Access(models.Model):
 
     @classmethod
     def authorize_implicit(cls, user, perm, resource=None):
-        return perm in cls.implicit_perms(user, resource)
+        user_id, resource_id = Access._user_resource_id(user, resource)
+        return perm in cls.implicit_perms(user_id, resource_id)
+
+    @classmethod
+    def implicit_perms(cls, user, resource=None):
+        """Overwrite this method to implement implicit checking."""
+        return ()
 
     @classmethod
     def allow(cls, user, perm, resource=None):
@@ -118,13 +117,12 @@ class AccessAttempt(models.Model):
     usr = models.PositiveIntegerField(_('User ID'))
     res = models.PositiveIntegerField(_('Resource ID'), blank=True, null=True)
     val = models.CharField(
-        verbose_name=_('Permission'), max_length=30, choices=Permission.CHOICES)
+        verbose_name=_('Permission'), max_length=30, choices=ACCESS_CONTROL_PERMISSION.CHOICES)
     datetime = models.DateTimeField(_('Date and time'), default=timezone.now)
     response = models.BooleanField(_('Accepted'), default=False)
     implicit = models.BooleanField(_('Implicit'), default=False)
 
     class Meta:
-        app_label = 'app'
         abstract = True
 
     def __str__(self):
@@ -144,60 +142,3 @@ class AccessAttempt(models.Model):
 
     def total(self, response=None, implicit=None, **time_filters):
         return self.like_this(response, implicit, **time_filters).count()
-
-
-def _create_access_model(base_model):
-    resource_name = base_model.split('.')[-1]
-
-    class AccessModel(Access):
-        resource_name = resource_name
-    setattr(AccessModel, '__name__', '%sAccess' % resource_name)
-
-    return AccessModel
-
-
-def _create_attempt_model(base_model):
-    resource_name = base_model.split('.')[-1]
-
-    class AttemptModel(AccessAttempt):
-        resource_name = resource_name
-    setattr(AttemptModel, '__name__', '%sAccessAttempt' % resource_name)
-
-    return AttemptModel
-
-
-def _create_access_attempt_model(base_model):
-    resource_name = base_model.split('.')[-1]
-
-    class AttemptModel(AccessAttempt):
-        resource_name = resource_name
-    setattr(AttemptModel, '__name__', '%sAccessAttempt' % resource_name)
-
-    class AccessModel(Access):
-        resource_name = resource_name
-        attempt_model = AttemptModel
-    setattr(AccessModel, '__name__', '%sAccess' % resource_name)
-
-    return AccessModel, AttemptModel
-
-
-def _auto_build_models(model_list):
-    built = []
-    for model in model_list:
-        if isinstance(model, str):
-            access, attempt = _create_access_attempt_model(model)
-            built.append({'model': model, 'access': access, 'attempt': attempt})
-        elif isinstance(model, dict):
-            if 'model' not in model.keys():
-                raise ValueError()
-            if 'attempt' not in model.keys():
-                attempt = _create_attempt_model(model['model'])
-                model['attempt'] = attempt
-            if 'access' not in model.keys():
-                access = _create_access_model(model['model'])
-                model['access'] = access
-            built.append(model)
-    return built
-
-
-auto_built = _auto_build_models(ACCESS_CONTROL_MODELS)
