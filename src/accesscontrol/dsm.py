@@ -180,16 +180,21 @@ class DSM(object):
             },
 
             'title': {
-                'text': 'Test DSM Member Cohort'
+                'text': None
             },
 
             'xAxis': {
-                'categories': categories_x
+                'categories': categories_x,
+                'title': {
+                    'text': None
+                }
             },
 
             'yAxis': {
                 'categories': categories_y,
-                'title': None
+                'title': {
+                    'text': None
+                }
             },
 
             'colorAxis': {
@@ -215,7 +220,7 @@ class DSM(object):
             },
 
             'series': [{
-                'name': 'Rights',
+                'name': None,
                 'borderWidth': 1,
                 'data': [{
                     'x': x,
