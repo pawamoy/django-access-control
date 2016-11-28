@@ -19,7 +19,7 @@ def read(*names, **kwargs):
 
 setup(
     name='django-access-control',
-    version='0.2.1',
+    version='0.2.2',
     license='',
     description='Control how users access resources in your Django project.',
     long_description='%s\n%s' % (
