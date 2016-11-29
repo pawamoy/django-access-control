@@ -1,1 +1,5 @@
 -r base.txt
+<<<<<<< HEAD
+=======
+
+>>>>>>> template

@@ -4,6 +4,7 @@ Django Access Control
 
 .. start-badges
 
+
 |travis|
 |codecov|
 |landscape|
@@ -11,6 +12,7 @@ Django Access Control
 |wheel|
 |pyup|
 |gitter|
+
 
 .. |travis| image:: https://travis-ci.org/Pawamoy/django-access-control.svg?branch=master
     :alt: Travis-CI Build Status

@@ -6,11 +6,17 @@ env:
     - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
     - SEGFAULT_SIGNALS=all
   matrix:
+<<<<<<< HEAD
     - TOXENV=check
 {% for env in tox_environments %}{{ '' }}
     - TOXENV={{ env }},codecov
 {% endfor %}
 
+=======
+    - TOXENV=check{% for env in tox_environments %}{{ '' }}
+    - TOXENV={{ env }},codecov
+{% endfor %}
+>>>>>>> template
 before_install:
   - python --version
   - uname -a

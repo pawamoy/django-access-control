@@ -33,9 +33,13 @@ if __name__ == "__main__":
     exec(compile(open(activate, "rb").read(), activate, "exec"), dict(__file__=activate))
 
     import jinja2
+<<<<<<< HEAD
 
     import subprocess
 
+=======
+    import subprocess
+>>>>>>> template
     jinja = jinja2.Environment(
         loader=jinja2.FileSystemLoader(join(base_path, "ci", "templates")),
         trim_blocks=True,

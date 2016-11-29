@@ -20,7 +20,7 @@ def read(*names, **kwargs):
 setup(
     name='django-access-control',
     version='0.2.2',
-    license='',
+    license='MPL 2.0',
     description='Control how users access resources in your Django project.',
     long_description='%s\n%s' % (
         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S)

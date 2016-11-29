@@ -192,4 +192,3 @@ class MainTestCase(TestCase):
         heatmap = matrix.to_highcharts_heatmap()
         heatmap_implicit = matrix.to_highcharts_heatmap(implicit=True)
         return True
-
