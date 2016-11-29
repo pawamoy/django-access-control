@@ -29,26 +29,20 @@ class Permission(object):
 
     ALL = GENERAL_PERMS
 
-    CHOICES = (
-        (_('General'), (
-            (SEE, _('Can see')),
-            (CHANGE, _('Can change')),
-            (DELETE, _('Can delete')),
-            (CREATE, _('Can create')),
-        )),
-    )
+    CHOICES = ((_('General'), (
+        (SEE, _('Can see')),
+        (CHANGE, _('Can change')),
+        (DELETE, _('Can delete')),
+        (CREATE, _('Can create')), )), )
 
     CHOICES_ALLOW_DENY = (
         (_('Allow: General'), (
             (allowed(SEE), _('Can see')),
             (allowed(CHANGE), _('Can change')),
             (allowed(DELETE), _('Can delete')),
-            (allowed(CREATE), _('Can create')),
-        )),
+            (allowed(CREATE), _('Can create')), )),
         (_('Deny: General'), (
             (denied(SEE), _('Can see')),
             (denied(CHANGE), _('Can change')),
             (denied(DELETE), _('Can delete')),
-            (denied(CREATE), _('Can create')),
-        )),
-    )
+            (denied(CREATE), _('Can create')), )), )

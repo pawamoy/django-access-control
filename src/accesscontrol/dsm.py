@@ -71,25 +71,44 @@ class DSM(object):
             matrix_data[index_y][index_x].append(obj.val)
 
         self.data = matrix_data
-        self.ids_x = [i[0] for i in sorted([(k, v) for k, v in set_x.items()], key=lambda l: l[1])]
-        self.ids_y = [i[0] for i in sorted([(k, v) for k, v in set_y.items()], key=lambda l: l[1])]
+        self.ids_x = [
+            i[0]
+            for i in sorted(
+                [(k, v) for k, v in set_x.items()], key=lambda l: l[1])
+        ]
+        self.ids_y = [
+            i[0]
+            for i in sorted(
+                [(k, v) for k, v in set_y.items()], key=lambda l: l[1])
+        ]
 
         if reverse:
             self.objects_x = [user_model.objects.get(id=i) for i in self.ids_x]
-            self.objects_y = [self.model.objects.get(id=i) if i else None for i in self.ids_y]
+            self.objects_y = [
+                self.model.objects.get(id=i) if i else None for i in self.ids_y
+            ]
             self.names_x = [str(o) for o in self.objects_x]
-            self.names_y = [str(o) if o else '** All **' for o in self.objects_y]
+            self.names_y = [
+                str(o) if o else '** All **' for o in self.objects_y
+            ]
         else:
-            self.objects_x = [self.model.objects.get(id=i) if i else None for i in self.ids_x]
+            self.objects_x = [
+                self.model.objects.get(id=i) if i else None for i in self.ids_x
+            ]
             self.objects_y = [user_model.objects.get(id=i) for i in self.ids_y]
-            self.names_x = [str(o) if o else '** All **' for o in self.objects_x]
+            self.names_x = [
+                str(o) if o else '** All **' for o in self.objects_x
+            ]
             self.names_y = [str(o) for o in self.objects_y]
 
         return self.data
 
-    def compute_implicit(self, reverse=False,
-                         user_filters=None, user_orders=None,
-                         resource_filters=None, resource_orders=None):
+    def compute_implicit(self,
+                         reverse=False,
+                         user_filters=None,
+                         user_orders=None,
+                         resource_filters=None,
+                         resource_orders=None):
         user_model = get_user_model()
         users = user_model.objects.all()
         resources = self.model.objects.all()
@@ -138,7 +157,8 @@ class DSM(object):
         if implicit:
             if not self.data_implicit:
                 self.compute_implicit(**kwargs)
-            categories_x, categories_y = self.names_x_implicit, self.names_y_implicit
+            categories_x = self.names_x_implicit
+            categories_y = self.names_y_implicit
             size_x, size_y = self.size_x_implicit, self.size_y_implicit
             data = self.data_implicit
         else:
@@ -155,19 +175,12 @@ class DSM(object):
             n_allow = len([p for p in rights if is_allowed(p)])
             return -1 * n_deny + n_allow
 
-        # def rights_to_color(rights):
-        #     pass
-
-        def value_to_color(value):
-            pass
-
         pixel_by_line = 40 if size_y < 10 else 18
         pixel_by_column = 50 if size_x < 30 else 25
 
-        values = {(x, y): rights_to_value(data[y][x], implicit=implicit)
+        values = {(x, y): rights_to_value(
+            data[y][x], implicit=implicit)
                   for x in range(size_x) for y in range(size_y) if data[y][x]}
-        # colors = {(x, y): value_to_color(values[(x, y)])
-        #           for x in range(size_x) for y in range(size_y) if data[y][x]}
 
         chart_dict = {
             'chart': {
@@ -178,30 +191,25 @@ class DSM(object):
                 'height': size_y * pixel_by_line + 120,
                 'width': size_x * pixel_by_column + 120
             },
-
             'title': {
                 'text': None
             },
-
             'xAxis': {
                 'categories': categories_x,
                 'title': {
                     'text': None
                 }
             },
-
             'yAxis': {
                 'categories': categories_y,
                 'title': {
                     'text': None
                 }
             },
-
             'colorAxis': {
                 'minColor': '#0000FF',
                 'maxColor': '#FF0000'
             },
-
             'legend': {
                 'align': 'right',
                 'layout': 'vertical',
@@ -211,24 +219,25 @@ class DSM(object):
                 'reversed': True,
                 'symbolHeight': size_y * pixel_by_line
             },
-
             'tooltip': {
                 'formatter':
-                    "return '<b>' + this.series.yAxis.categories[this.point.y] + '</b><br>' + "
-                    "'<b>' + this.point.perms + '</b><br>' + "
-                    "'<b>' + this.series.xAxis.categories[this.point.x] + '</b>';"
+                "return '<b>' + this.series.yAxis.categories[this.point.y]"
+                " + '</b><br>' + '<b>' + this.point.perms + '</b><br>' + "
+                "'<b>' + this.series.xAxis.categories[this.point.x] + '</b>';"
             },
-
             'series': [{
                 'name': None,
                 'borderWidth': 1,
-                'data': [{
-                    'x': x,
-                    'y': y,
-                    'value': values[(x, y)],
-                    # 'color': colors[(x, y)],
-                    'perms': data[y][x]
-                } for x in range(size_x) for y in range(size_y) if data[y][x]],
+                'data': [
+                    {
+                        'x': x,
+                        'y': y,
+                        'value': values[(x, y)],
+                        # 'color': colors[(x, y)],
+                        'perms': data[y][x]
+                    } for x in range(size_x) for y in range(size_y)
+                    if data[y][x]
+                ],
                 'dataLabels': {
                     'enabled': False
                 }
