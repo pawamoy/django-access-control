@@ -29,8 +29,8 @@ Django Access Control
 
 
 .. |pyup| image:: https://pyup.io/repos/github/pawamoy/django-access-control/shield.svg
-     :target: https://pyup.io/repos/github/pawamoy/django-access-control/
-     :alt: Updates
+    :target: https://pyup.io/repos/github/pawamoy/django-access-control/
+    :alt: Updates
 
 .. |gitter| image:: https://badges.gitter.im/Pawamoy/django-access-control.svg
     :alt: Join the chat at https://gitter.im/Pawamoy/django-access-control
