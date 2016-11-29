@@ -1,0 +1,16 @@
+[paths]
+source =
+   src/accesscontrol
+   */site-packages/accesscontrol
+
+[run]
+branch = true
+source =
+    accesscontrol
+    tests
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*
