@@ -36,7 +36,7 @@ default_context:
     project_name:                    'Django Access Control'
     project_short_description:       'Control how users access resources in your Django project.'
     pyup:                            'yes'
-    release_date:                    'today'
+    release_date:                    '2016-11-23'
     repo_name:                       'django-access-control'
     requiresio:                      'no'
     scrutinizer:                     'no'
@@ -45,4 +45,3 @@ default_context:
     travis:                          'yes'
     version:                         '0.1.0'
     website:                         'http://pawamoy.github.io/'
-    year:                            'now'
