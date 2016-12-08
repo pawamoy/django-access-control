@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""Main test script."""
+
 from django.contrib.auth.models import User
 from django.db import models
+
 from django.test import TestCase
 
 from django_fake_model import models as f
@@ -44,6 +47,7 @@ authorize, allow, deny, forget = Control({
 @FakeResourceAccess.fake_me
 @FakeResourceAccessAttempt.fake_me
 class MainTestCase(TestCase):
+    """Main Django test case"""
     def setUp(self):
         self.users = [
             User.objects.create_user(username='user 1', email='', password='password 1'),
