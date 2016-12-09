@@ -45,8 +45,8 @@ try:
 except ImportError:
     import traceback
     traceback.print_exc()
-    msg = 'To fix this error, run: pip install -r requirements/test.txt'
-    raise ImportError(msg)
+    raise ImportError('To fix this error, maybe run '
+                      '`pip install -r requirements/test.txt`')
 
 
 def run_tests(*test_args):
@@ -55,8 +55,8 @@ def run_tests(*test_args):
         test_args = ['tests']
 
     # Run tests
-    TestRunner = get_runner(settings)
-    test_runner = TestRunner()
+    runner = get_runner(settings)
+    test_runner = runner()
 
     failures = test_runner.run_tests(test_args)
 
