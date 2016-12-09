@@ -1,12 +1,29 @@
 # -*- coding: utf-8 -*-
 
+"""
+DSM module.
+
+This module provides a DSM class to be used with access and access attempt
+model in order to create design structures matrices. The matrices can then
+be converted to a highcharts dictionary.
+"""
+
 from django.contrib.auth import get_user_model
 
 from . import is_allowed, is_denied
 
 
 class DSM(object):
+    """DSM class. Build matrices of rules between users and resources."""
+
     def __init__(self, model, access_model):
+        """
+        Init method.
+
+        Args:
+            model (Model): one of your models.
+            access_model (Model): the corresponding access model.
+        """
         self.model = model
         self.access_model = access_model
 
@@ -29,6 +46,19 @@ class DSM(object):
         self.names_y_implicit = None
 
     def compute(self, reverse=False, filters=None, orders=None):
+        """
+        Compute the DSM with the explicit rules.
+
+        Args:
+            reverse (bool): if True, users in x-axis and resources in y-axis.
+            filters (list): list of django filters to pass to a ``filter``
+                model method.
+            orders (list): list of django orders to pass to an ``order_by``
+                model method.
+
+        Returns:
+            list of list of int: 2-dim array, the computed matrix.
+        """
         user_model = get_user_model()
         x, y = 'res', 'usr'
         if reverse:
@@ -109,6 +139,23 @@ class DSM(object):
                          user_orders=None,
                          resource_filters=None,
                          resource_orders=None):
+        """
+        Compute the DSM with the implicit rules. Can be very slow.
+
+        Args:
+            reverse (bool): if True, users in x-axis and resources in y-axis.
+            user_filters (dict): dict of django filters to pass to a
+                ``filter`` model method as kwargs.
+            user_orders (list): list of django orders to pass to an
+                ``order_by`` model method.
+            resource_filters (dict): dict of django filters to pass to a
+                ``filter`` model method as kwargs.
+            resource_orders (list): list of django orders to pass to an
+                ``order_by`` model method.
+
+        Returns:
+            list of list of int: 2-dim array, the computed matrix.
+        """
         user_model = get_user_model()
         users = user_model.objects.all()
         resources = self.model.objects.all()
@@ -154,6 +201,16 @@ class DSM(object):
         return self.data_implicit
 
     def to_highcharts_heatmap(self, implicit=False, **kwargs):
+        """
+        Get the data as a highcharts heatmap dictionary.
+
+        Args:
+            implicit (bool): use implicit rules or not.
+            **kwargs (): keyword args to pass to the related compute method.
+
+        Returns:
+            dict: a highcharts heatmap dictionary.
+        """
         if implicit:
             if not self.data_implicit:
                 self.compute_implicit(**kwargs)
@@ -178,8 +235,7 @@ class DSM(object):
         pixel_by_line = 40 if size_y < 10 else 18
         pixel_by_column = 50 if size_x < 30 else 25
 
-        values = {(x, y): rights_to_value(
-            data[y][x], implicit=implicit)
+        values = {(x, y): rights_to_value(data[y][x], implicit=implicit)
                   for x in range(size_x) for y in range(size_y) if data[y][x]}
 
         chart_dict = {

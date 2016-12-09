@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+"""
+Entry point for Django tests.
+
+This script will setup the basic configuration needed by Django.
+"""
+
 import sys
 from os.path import abspath, dirname, join
 
@@ -44,6 +50,7 @@ except ImportError:
 
 
 def run_tests(*test_args):
+    """Discover and run tests."""
     if not test_args:
         test_args = ['tests']
 

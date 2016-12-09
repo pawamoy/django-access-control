@@ -15,16 +15,31 @@ from accesscontrol.models import Access, AccessAttempt
 
 
 class FakeUser(f.FakeModel, User):
-    pass
+    """Fake user model."""
 
 
 class FakeResource(f.FakeModel, models.Model):
+    """Fake resource model."""
+
     name = models.CharField(max_length=100)
 
 
 class FakeResourceAccess(f.FakeModel, Access):
+    """Fake resource access model with implicit_perms method."""
+
     @classmethod
     def implicit_perms(cls, user, resource=None):
+        """
+        Implicit permissions based on IDs.
+
+        If the user has the same id than the resource, then we assume he has
+        all permissions on the resource.
+
+        If resource is None, then the user has permission to create this
+        type of resource.
+
+        Else, he has no permissions at all.
+        """
         user_id, resource_id = Access._user_resource_id(user, resource)
         if user_id == resource_id:
             return Permission.ALL
@@ -34,7 +49,7 @@ class FakeResourceAccess(f.FakeModel, Access):
 
 
 class FakeResourceAccessAttempt(f.FakeModel, AccessAttempt):
-    pass
+    """Fake resource access attempt model."""
 
 
 authorize, allow, deny, forget = Control({
@@ -47,14 +62,21 @@ authorize, allow, deny, forget = Control({
 @FakeResourceAccess.fake_me
 @FakeResourceAccessAttempt.fake_me
 class MainTestCase(TestCase):
-    """Main Django test case"""
+    """Main Django test case."""
+
     def setUp(self):
+        """Setup users and resources."""
         self.users = [
-            User.objects.create_user(username='user 1', email='', password='password 1'),
-            User.objects.create_user(username='user 2', email='', password='password 2'),
-            User.objects.create_user(username='user 3', email='', password='password 3'),
-            User.objects.create_user(username='user 4', email='', password='password 4'),
-            User.objects.create_user(username='user 5', email='', password='password 5'),
+            User.objects.create_user(
+                username='user 1', email='', password='password 1'),
+            User.objects.create_user(
+                username='user 2', email='', password='password 2'),
+            User.objects.create_user(
+                username='user 3', email='', password='password 3'),
+            User.objects.create_user(
+                username='user 4', email='', password='password 4'),
+            User.objects.create_user(
+                username='user 5', email='', password='password 5'),
         ]
         self.resources = [
             FakeResource.objects.create(name='resource 1'),
@@ -65,6 +87,7 @@ class MainTestCase(TestCase):
         ]
 
     def test_implicit_rights(self):
+        """Test implicit rights."""
         for u, user in enumerate(self.users):
             for r, resource in enumerate(self.resources):
                 if u == r:
@@ -82,6 +105,7 @@ class MainTestCase(TestCase):
             assert authorize(user, Permission.CREATE, FakeResource)
 
     def test_implicit_access_attempts(self):
+        """Test implicit access attempts. Will call test_implicit_rights."""
         self.test_implicit_rights()
 
         for u, user in enumerate(self.users):
@@ -102,6 +126,7 @@ class MainTestCase(TestCase):
                 usr=user.id, res=None, val=Permission.CREATE, response=True, implicit=True)
 
     def test_explicit_rights(self):
+        """Test explicit rights."""
         for resource in self.resources:
             allow(self.users[0], Permission.SEE, resource)
             allow(self.users[0], Permission.CHANGE, resource)
@@ -137,6 +162,7 @@ class MainTestCase(TestCase):
         assert authorize(self.users[-1], Permission.CREATE, FakeResource)
 
     def test_explicit_access_attempts(self):
+        """Test explicit access attempts. Will call test_explicit_rights."""
         self.test_explicit_rights()
 
         for resource in self.resources:
@@ -178,6 +204,7 @@ class MainTestCase(TestCase):
             response=True, implicit=True)
 
     def test_implicit_rights_again(self):
+        """Test implicit rights after having set explicit rights."""
         self.test_explicit_rights()
 
         access_attempts_number = FakeResourceAccessAttempt.objects.all().count()
@@ -192,7 +219,9 @@ class MainTestCase(TestCase):
         assert FakeResourceAccessAttempt.objects.all().count() == access_attempts_number
 
     def test_matrix(self):
+        """Test matrix creation."""
         matrix = DSM(FakeResource, FakeResourceAccess)
         heatmap = matrix.to_highcharts_heatmap()
+        assert heatmap['series'][0]['data'] == []
         heatmap_implicit = matrix.to_highcharts_heatmap(implicit=True)
         return True
