@@ -19,6 +19,24 @@ from . import (ACCESS_CONTROL_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE,
                DummyAttempt, allowed, denied)
 
 
+# Algorithm authorize
+# Check user's explicit perms
+# If found deny -> deny (deny > allow)
+# If found allow -> allow
+# Else
+#   If user inherits groups permissions
+#   Check group's explicit perms
+#   If found deny -> deny (deny > allow)
+#   If found allow -> allow
+#   Else
+#       If implicit authorized
+#       Get implicit user authorization
+#       If got something, return it
+#       Else, get implicit group authorization
+#           If got something, return it
+#           Else, return default response.
+
+
 class Access(models.Model):
     """
     Access model.
@@ -31,6 +49,7 @@ class Access(models.Model):
         val (str): model field to store the permission.
     """
 
+    resource_name = None
     ignored_perms = ()
 
     usr = models.PositiveIntegerField(_('User ID'))
@@ -51,16 +70,24 @@ class Access(models.Model):
         return '%s %s %s for user %s' % (self.val, self.resource_name, self.res
                                          if self.res else '', self.usr)
 
-    @staticmethod
-    def _user_resource_id(user, resource):
-        """Use this method to cast user and resource to integers (ids)."""
+    @classmethod
+    def user_id(cls, user):
         user_id = user
         if not isinstance(user_id, int):
             user_id = user.id
+        return user_id
+
+    @classmethod
+    def resource_id(cls, resource):
         resource_id = resource
         if resource and not isinstance(resource_id, int):
             resource_id = resource.id
-        return user_id, resource_id
+        return resource_id
+
+    @classmethod
+    def user_resource_id(cls, user, resource):
+        """Use this method to cast user and resource to integers (ids)."""
+        return cls.user_id(user), cls.resource_id(resource)
 
     @classmethod
     def authorize(cls,
@@ -68,6 +95,7 @@ class Access(models.Model):
                   perm,
                   resource=None,
                   save=True,
+                  skip_implicit=False,
                   attempt_model=DummyAttempt):
         """
         Authorize access to a resource or a type of resource.
@@ -85,12 +113,15 @@ class Access(models.Model):
                 in Permission class.
             resource (): an instance of one of your models, its id, or None.
             save (bool): record an entry in access attempt model or not.
+            skip_implicit (bool): whether to skip implicit authorization.
+                It will always be skipped if you set ACCESS_CONTROL_IMPLICIT
+                setting to False.
             attempt_model (model): the access attempt model to use.
 
         Returns:
             bool: user has perm on resource (or not).
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
 
         attempt = attempt_model(usr=user_id, res=resource_id, val=perm)
 
@@ -110,7 +141,7 @@ class Access(models.Model):
         elif perm in cls.ignored_perms:
             attempt.response = False
 
-        elif ACCESS_CONTROL_IMPLICIT:
+        elif ACCESS_CONTROL_IMPLICIT and not skip_implicit:
             attempt.response = cls.authorize_implicit(user_id, perm,
                                                       resource_id)
             attempt.implicit = True
@@ -138,7 +169,7 @@ class Access(models.Model):
         Returns:
 
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
         return perm in cls.implicit_perms(user_id, resource_id)
 
     @classmethod
@@ -169,7 +200,7 @@ class Access(models.Model):
         Returns:
             access instance: the created rule.
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
         try:
             p = cls.objects.get(usr=user_id, val=denied(perm), res=resource_id)
             p.val = allowed(perm)
@@ -193,7 +224,7 @@ class Access(models.Model):
         Returns:
             access instance: the created rule.
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
         try:
             p = cls.objects.get(
                 usr=user_id, val=allowed(perm), res=resource_id)
@@ -219,7 +250,7 @@ class Access(models.Model):
             int, dict: the number of rules deleted and a dictionary with the
             number of deletions per object type (django's delete return).
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
         return cls.objects.filter(
             Q(usr=user_id) & Q(res=resource_id) & (Q(val=allowed(perm)) | Q(
                 val=denied(perm)))).delete()
