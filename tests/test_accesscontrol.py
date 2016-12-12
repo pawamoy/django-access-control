@@ -40,7 +40,7 @@ class FakeResourceAccess(f.FakeModel, Access):
 
         Else, he has no permissions at all.
         """
-        user_id, resource_id = Access._user_resource_id(user, resource)
+        user_id, resource_id = cls.user_resource_id(user, resource)
         if user_id == resource_id:
             return Permission.ALL
         elif resource is None:
