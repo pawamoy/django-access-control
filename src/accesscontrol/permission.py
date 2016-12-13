@@ -88,6 +88,9 @@ class Permission(object):
 
     ALL = GENERAL_PERMS
 
+    ALLOW_ALL = [allowed(p) for p in ALL]
+    DENY_ALL = [denied(p) for p in ALL]
+
     CHOICES = ((_('General'), (
         (SEE, _('Can see')),
         (CHANGE, _('Can change')),

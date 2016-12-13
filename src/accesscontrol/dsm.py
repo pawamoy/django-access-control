@@ -8,15 +8,13 @@ model in order to create design structures matrices. The matrices can then
 be converted to a highcharts dictionary.
 """
 
-from django.contrib.auth import get_user_model
-
 from . import is_allowed, is_denied
 
 
 class DSM(object):
-    """DSM class. Build matrices of rules between users and resources."""
+    """DSM class. Build matrices of rules between entities and resources."""
 
-    def __init__(self, model, access_model):
+    def __init__(self, model, access_model, entity_model):
         """
         Init method.
 
@@ -26,6 +24,7 @@ class DSM(object):
         """
         self.model = model
         self.access_model = access_model
+        self.entity_model = entity_model
 
         self.data = None
         self.size_x = 0
@@ -50,7 +49,7 @@ class DSM(object):
         Compute the DSM with the explicit rules.
 
         Args:
-            reverse (bool): if True, users in x-axis and resources in y-axis.
+            reverse (bool): if True, entities in x-axis, resources in y-axis.
             filters (list): list of django filters to pass to a ``filter``
                 model method.
             orders (list): list of django orders to pass to an ``order_by``
@@ -59,8 +58,7 @@ class DSM(object):
         Returns:
             list of list of int: 2-dim array, the computed matrix.
         """
-        user_model = get_user_model()
-        x, y = 'res', 'usr'
+        x, y = 'resource', 'entity'
         if reverse:
             x, y = y, x
         objects = self.access_model.objects.all()
@@ -113,19 +111,23 @@ class DSM(object):
         ]
 
         if reverse:
-            self.objects_x = [user_model.objects.get(id=i) for i in self.ids_x]
+            self.objects_x = [
+                self.entity_model.objects.get(id=i) for i in self.ids_x
+            ]
             self.objects_y = [
                 self.model.objects.get(id=i) if i else None for i in self.ids_y
             ]
-            self.names_x = [str(o) for o in self.objects_x]
             self.names_y = [
                 str(o) if o else '** All **' for o in self.objects_y
             ]
+            self.names_x = [str(o) for o in self.objects_x]
         else:
             self.objects_x = [
                 self.model.objects.get(id=i) if i else None for i in self.ids_x
             ]
-            self.objects_y = [user_model.objects.get(id=i) for i in self.ids_y]
+            self.objects_y = [
+                self.entity_model.objects.get(id=i) for i in self.ids_y
+            ]
             self.names_x = [
                 str(o) if o else '** All **' for o in self.objects_x
             ]
@@ -135,18 +137,18 @@ class DSM(object):
 
     def compute_implicit(self,
                          reverse=False,
-                         user_filters=None,
-                         user_orders=None,
+                         entity_filters=None,
+                         entity_orders=None,
                          resource_filters=None,
                          resource_orders=None):
         """
         Compute the DSM with the implicit rules. Can be very slow.
 
         Args:
-            reverse (bool): if True, users in x-axis and resources in y-axis.
-            user_filters (dict): dict of django filters to pass to a
+            reverse (bool): if True, entities in x-axis, resources in y-axis.
+            entity_filters (dict): dict of django filters to pass to a
                 ``filter`` model method as kwargs.
-            user_orders (list): list of django orders to pass to an
+            entity_orders (list): list of django orders to pass to an
                 ``order_by`` model method.
             resource_filters (dict): dict of django filters to pass to a
                 ``filter`` model method as kwargs.
@@ -156,15 +158,14 @@ class DSM(object):
         Returns:
             list of list of int: 2-dim array, the computed matrix.
         """
-        user_model = get_user_model()
-        users = user_model.objects.all()
+        entities = self.entity_model.objects.all()
         resources = self.model.objects.all()
 
-        if user_filters:
-            users = users.filter(**user_filters)
-        if user_orders:
-            for order in user_orders:
-                users = users.order_by(order)
+        if entity_filters:
+            entities = entities.filter(**entity_filters)
+        if entity_orders:
+            for order in entity_orders:
+                entities = entities.order_by(order)
         if resource_filters:
             resources = resources.filter(**resource_filters)
         if resource_orders:
@@ -178,7 +179,7 @@ class DSM(object):
             return self.access_model.implicit_perms(u, r)
 
         implicit_perms = i_p_default
-        x, y = resources, users
+        x, y = resources, entities
         if reverse:
             implicit_perms = i_p_reverse
             x, y = y, x

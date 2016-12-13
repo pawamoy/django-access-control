@@ -2,20 +2,22 @@
 
 """Main test script."""
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.db import models
-
 from django.test import TestCase
-
 from django_fake_model import models as f
 
-from accesscontrol import Control, Permission
+from accesscontrol import Control, Permission, allowed
 from accesscontrol.dsm import DSM
-from accesscontrol.models import Access, AccessAttempt
+from accesscontrol.models import AccessAttempt, GroupAccess, UserAccess
 
 
 class FakeUser(f.FakeModel, User):
     """Fake user model."""
+
+
+class FakeGroup(f.FakeModel, Group):
+    """Fake group model."""
 
 
 class FakeResource(f.FakeModel, models.Model):
@@ -24,7 +26,7 @@ class FakeResource(f.FakeModel, models.Model):
     name = models.CharField(max_length=100)
 
 
-class FakeResourceAccess(f.FakeModel, Access):
+class FakeResourceAccess(f.FakeModel, UserAccess):
     """Fake resource access model with implicit_perms method."""
 
     @classmethod
@@ -40,12 +42,16 @@ class FakeResourceAccess(f.FakeModel, Access):
 
         Else, he has no permissions at all.
         """
-        user_id, resource_id = cls.user_resource_id(user, resource)
+        user_id, resource_id = cls.entity_resource_id(user, resource)
         if user_id == resource_id:
-            return Permission.ALL
+            return Permission.ALLOW_ALL
         elif resource is None:
-            return Permission.CREATE,
+            return allowed(Permission.CREATE),
         return ()
+
+
+class FakeResourceGroupAccess(f.FakeModel, GroupAccess):
+    """Fake resource group access model without implicit_perms method."""
 
 
 class FakeResourceAccessAttempt(f.FakeModel, AccessAttempt):
@@ -53,13 +59,17 @@ class FakeResourceAccessAttempt(f.FakeModel, AccessAttempt):
 
 
 authorize, allow, deny, forget = Control({
-    FakeResource: (FakeResourceAccess, FakeResourceAccessAttempt)
+    FakeResource: (FakeResourceAccess,
+                   FakeResourceGroupAccess,
+                   FakeResourceAccessAttempt)
 }).get_controls()
 
 
 @FakeUser.fake_me
+@FakeGroup.fake_me
 @FakeResource.fake_me
 @FakeResourceAccess.fake_me
+@FakeResourceGroupAccess.fake_me
 @FakeResourceAccessAttempt.fake_me
 class MainTestCase(TestCase):
     """Main Django test case."""
@@ -67,15 +77,15 @@ class MainTestCase(TestCase):
     def setUp(self):
         """Setup users and resources."""
         self.users = [
-            User.objects.create_user(
+            FakeUser.objects.create_user(
                 username='user 1', email='', password='password 1'),
-            User.objects.create_user(
+            FakeUser.objects.create_user(
                 username='user 2', email='', password='password 2'),
-            User.objects.create_user(
+            FakeUser.objects.create_user(
                 username='user 3', email='', password='password 3'),
-            User.objects.create_user(
+            FakeUser.objects.create_user(
                 username='user 4', email='', password='password 4'),
-            User.objects.create_user(
+            FakeUser.objects.create_user(
                 username='user 5', email='', password='password 5'),
         ]
         self.resources = [
@@ -113,17 +123,20 @@ class MainTestCase(TestCase):
                 if u == r:
                     for perm in Permission.GENERAL_PERMS:
                         assert FakeResourceAccessAttempt.objects.get(
-                            usr=user.id, res=resource.id, val=perm, response=True, implicit=True
+                            user=user.id, resource=resource.id, perm=perm,
+                            response=True, implicit=True
                         )
                 else:
                     for perm in Permission.GENERAL_PERMS:
                         assert FakeResourceAccessAttempt.objects.get(
-                            usr=user.id, res=resource.id, val=perm, response=False, implicit=True
+                            user=user.id, resource=resource.id, perm=perm,
+                            response=False, default=True
                         )
 
         for user in self.users:
             assert FakeResourceAccessAttempt.objects.get(
-                usr=user.id, res=None, val=Permission.CREATE, response=True, implicit=True)
+                user=user.id, resource=None, perm=Permission.CREATE,
+                response=True, implicit=True)
 
     def test_explicit_rights(self):
         """Test explicit rights."""
@@ -142,7 +155,8 @@ class MainTestCase(TestCase):
         assert authorize(self.users[0], Permission.CREATE, 'FakeResource')
 
         forget(self.users[0], Permission.DELETE, self.resources[-1])
-        assert not authorize(self.users[0], Permission.DELETE, self.resources[-1])
+        assert not authorize(self.users[0], Permission.DELETE,
+                             self.resources[-1])
 
         for resource in self.resources:
             deny(self.users[-1], Permission.SEE, resource)
@@ -167,47 +181,48 @@ class MainTestCase(TestCase):
 
         for resource in self.resources:
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[0].id, val=Permission.SEE, res=resource.id,
-                response=True, implicit=False)
+                user=self.users[0].id, perm=Permission.SEE,
+                resource=resource.id, response=True, implicit=False)
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[0].id, val=Permission.CHANGE, res=resource.id,
-                response=True, implicit=False)
+                user=self.users[0].id, perm=Permission.CHANGE,
+                resource=resource.id, response=True, implicit=False)
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[0].id, val=Permission.DELETE, res=resource.id,
-                response=True, implicit=False)
+                user=self.users[0].id, perm=Permission.DELETE,
+                resource=resource.id, response=True, implicit=False)
 
         assert FakeResourceAccessAttempt.objects.get(
-            usr=self.users[0].id, val=Permission.CREATE, res=None,
+            user=self.users[0].id, perm=Permission.CREATE, resource=None,
             response=True, implicit=False)
 
         assert FakeResourceAccessAttempt.objects.get(
-            usr=self.users[0].id, val=Permission.DELETE, res=self.resources[-1].id,
-            response=False, implicit=True)
+            user=self.users[0].id, perm=Permission.DELETE,
+            resource=self.resources[-1].id,
+            response=False, default=True)
 
         for resource in self.resources:
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[-1].id, val=Permission.SEE, res=resource.id,
-                response=False, implicit=False)
+                user=self.users[-1].id, perm=Permission.SEE,
+                resource=resource.id, response=False, implicit=False)
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[-1].id, val=Permission.CHANGE, res=resource.id,
-                response=False, implicit=False)
+                user=self.users[-1].id, perm=Permission.CHANGE,
+                resource=resource.id, response=False, implicit=False)
             assert FakeResourceAccessAttempt.objects.get(
-                usr=self.users[-1].id, val=Permission.DELETE, res=resource.id,
-                response=False, implicit=False)
+                user=self.users[-1].id, perm=Permission.DELETE,
+                resource=resource.id, response=False, implicit=False)
 
         assert FakeResourceAccessAttempt.objects.get(
-            usr=self.users[-1].id, val=Permission.CREATE, res=None,
+            user=self.users[-1].id, perm=Permission.CREATE, resource=None,
             response=False, implicit=False)
 
         assert FakeResourceAccessAttempt.objects.get(
-            usr=self.users[-1].id, val=Permission.CREATE, res=None,
+            user=self.users[-1].id, perm=Permission.CREATE, resource=None,
             response=True, implicit=True)
 
     def test_implicit_rights_again(self):
         """Test implicit rights after having set explicit rights."""
         self.test_explicit_rights()
 
-        access_attempts_number = FakeResourceAccessAttempt.objects.all().count()
+        access_attempts_number = FakeResourceAccessAttempt.objects.all().count()  # noqa
 
         assert FakeResourceAccess.authorize_implicit(
             self.users[-1], Permission.SEE, self.resources[-1])
@@ -216,12 +231,20 @@ class MainTestCase(TestCase):
         assert FakeResourceAccess.authorize_implicit(
             self.users[-1], Permission.DELETE, self.resources[-1])
 
-        assert FakeResourceAccessAttempt.objects.all().count() == access_attempts_number
+        assert FakeResourceAccessAttempt.objects.all().count() == access_attempts_number  # noqa
 
-    def test_matrix(self):
-        """Test matrix creation."""
-        matrix = DSM(FakeResource, FakeResourceAccess)
+    def test_matrix_users(self):
+        """Test matrix creation with users as entities."""
+        matrix = DSM(FakeResource, FakeResourceAccess, FakeUser)
         heatmap = matrix.to_highcharts_heatmap()
         assert heatmap['series'][0]['data'] == []
         heatmap_implicit = matrix.to_highcharts_heatmap(implicit=True)
-        return True
+        assert heatmap_implicit['series'][0]['data'] != []
+
+    def test_matrix_groups(self):
+        """Test matrix creation with groups as entities."""
+        matrix = DSM(FakeResource, FakeResourceGroupAccess, FakeGroup)
+        heatmap = matrix.to_highcharts_heatmap()
+        assert heatmap['series'][0]['data'] == []
+        heatmap_implicit = matrix.to_highcharts_heatmap(implicit=True)
+        assert heatmap_implicit['series'][0]['data'] == []

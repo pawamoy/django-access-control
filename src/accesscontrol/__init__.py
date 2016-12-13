@@ -24,6 +24,8 @@ ACCESS_CONTROL_PERMISSION = getattr(
 ACCESS_CONTROL_IMPLICIT = getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
 ACCESS_CONTROL_DEFAULT_RESPONSE = getattr(
     settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
+ACCESS_CONTROL_INHERIT_GROUP_PERMS = getattr(
+    settings, 'ACCESS_CONTROL_INHERIT_GROUP_PERMS', True)
 
 allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
 denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
@@ -90,7 +92,7 @@ class Control(object):
         """
         self.control_mapping = control_mapping
 
-    def _get_func_attempt(self, control, resource):
+    def _get_func_group_attempt_resource(self, control, resource):
         key = None
         if isinstance(resource, type):
             key = resource
@@ -103,13 +105,20 @@ class Control(object):
             resource = None
         elif hasattr(resource, '__class__'):
             key = resource.__class__
-        access_model, attempt_model = self.control_mapping.get(
-            key, (None, DummyAttempt))
+        access_model, group_model, attempt_model = self.control_mapping.get(
+            key, (None, None, DummyAttempt))
         if access_model is None:
             raise ValueError('Mapping between resources '
                              'and access models does not contain '
                              '%s' % key.__name__)
-        return getattr(access_model, control), attempt_model, resource
+        return (getattr(access_model, control),
+                group_model,
+                attempt_model,
+                resource)
+
+    def _get_func_resource(self, control, resource):
+        f, g, a, r = self._get_func_group_attempt_resource(control, resource)
+        return f, r
 
     def authorize(self, user, perm, resource):
         """
@@ -132,8 +141,11 @@ class Control(object):
         Returns:
             bool: user has perm on resource (or not).
         """
-        func, attempt, resource = self._get_func_attempt('authorize', resource)
-        return func(user, perm, resource, attempt_model=attempt)
+        func, group, attempt, resource = self._get_func_group_attempt_resource(
+            'authorize', resource)
+        return func(user, perm, resource,
+                    attempt_model=attempt,
+                    group_access_model=group)
 
     def allow(self, user, perm, resource):
         """
@@ -149,7 +161,7 @@ class Control(object):
         Returns:
             access instance: the created rule.
         """
-        func, attempt, resource = self._get_func_attempt('allow', resource)
+        func, resource = self._get_func_resource('allow', resource)
         return func(user, perm, resource)
 
     def deny(self, user, perm, resource):
@@ -166,7 +178,7 @@ class Control(object):
         Returns:
             access instance: the created rule.
         """
-        func, attempt, resource = self._get_func_attempt('deny', resource)
+        func, resource = self._get_func_resource('deny', resource)
         return func(user, perm, resource)
 
     def forget(self, user, perm, resource):
@@ -184,7 +196,7 @@ class Control(object):
             int, dict: the number of rules deleted and a dictionary with the
             number of deletions per object type (django's delete return).
         """
-        func, attempt, resource = self._get_func_attempt('forget', resource)
+        func, resource = self._get_func_resource('forget', resource)
         return func(user, perm, resource)
 
     def get_controls(self):
