@@ -20,7 +20,7 @@ __version__ = "0.2.2"
 ACCESS_CONTROL_APP_LABEL = getattr(settings, 'ACCESS_CONTROL_APP_LABEL',
                                    'accesscontrol')
 ACCESS_CONTROL_PERMISSION = getattr(
-    settings, 'ACCESS_CONTROL_PERMISSION_CLASS', Permission)
+    settings, 'ACCESS_CONTROL_PERMISSION', Permission)
 ACCESS_CONTROL_IMPLICIT = getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
 ACCESS_CONTROL_DEFAULT_RESPONSE = getattr(
     settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
@@ -32,21 +32,28 @@ denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
 is_allowed = getattr(settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
 is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
 
+
+def _import(complete_path):
+    module_name = '.'.join(complete_path.split('.')[:-1])
+    module = importlib.import_module(name=module_name)
+    function_or_class = getattr(module, complete_path.split('.')[-1])
+    return function_or_class
+
+
 if isinstance(ACCESS_CONTROL_PERMISSION, str):
-    ACCESS_CONTROL_PERMISSION = importlib.import_module(
-        ACCESS_CONTROL_PERMISSION)
+    ACCESS_CONTROL_PERMISSION = _import(ACCESS_CONTROL_PERMISSION)
 
 if isinstance(allowed, str):
-    allowed = importlib.import_module(allowed)
+    allowed = _import(allowed)
 
 if isinstance(denied, str):
-    denied = importlib.import_module(denied)
+    denied = _import(denied)
 
 if isinstance(is_allowed, str):
-    is_allowed = importlib.import_module(is_allowed)
+    is_allowed = _import(is_allowed)
 
 if isinstance(is_denied, str):
-    is_denied = importlib.import_module(is_denied)
+    is_denied = _import(is_denied)
 
 
 class DummyAttempt(object):
@@ -92,7 +99,7 @@ class Control(object):
         """
         self.control_mapping = control_mapping
 
-    def _get_func_group_attempt_resource(self, control, resource):
+    def _get_mapped_value(self, resource):
         key = None
         if isinstance(resource, type):
             key = resource
@@ -111,16 +118,17 @@ class Control(object):
             raise ValueError('Mapping between resources '
                              'and access models does not contain '
                              '%s' % key.__name__)
-        return (getattr(access_model, control),
-                group_model,
-                attempt_model,
-                resource)
+        return access_model, group_model, attempt_model, resource
 
-    def _get_func_resource(self, control, resource):
-        f, g, a, r = self._get_func_group_attempt_resource(control, resource)
-        return f, r
+    def _get_user_func_resource(self, control, resource):
+        u, g, a, r = self._get_mapped_value(resource)
+        return getattr(u, control), r
 
-    def authorize(self, user, perm, resource):
+    def _get_group_func_resource(self, control, resource):
+        u, g, a, r = self._get_mapped_value(resource)
+        return getattr(g, control), r
+
+    def authorize(self, user, perm, resource, save=True, skip_implicit=False):
         """
         Authorize access to a resource or a type of resource.
 
@@ -137,15 +145,21 @@ class Control(object):
                 in Permission class.
             resource (): an instance of one of your models, a model,
                 or a string equal to the name of a model.
+            save (bool): record an entry in access attempt model or not.
+            skip_implicit (bool): whether to skip implicit authorization.
+                It will always be skipped if you set ACCESS_CONTROL_IMPLICIT
+                setting to False.
 
         Returns:
             bool: user has perm on resource (or not).
         """
-        func, group, attempt, resource = self._get_func_group_attempt_resource(
-            'authorize', resource)
-        return func(user, perm, resource,
-                    attempt_model=attempt,
-                    group_access_model=group)
+        user_access_model, group_access_model, attempt_model, resource = (
+            self._get_mapped_value(resource))
+        return getattr(user_access_model, 'authorize')(
+            user, perm, resource,
+            save=save, skip_implicit=skip_implicit,
+            attempt_model=attempt_model,
+            group_access_model=group_access_model)
 
     def allow(self, user, perm, resource):
         """
@@ -161,7 +175,7 @@ class Control(object):
         Returns:
             access instance: the created rule.
         """
-        func, resource = self._get_func_resource('allow', resource)
+        func, resource = self._get_user_func_resource('allow', resource)
         return func(user, perm, resource)
 
     def deny(self, user, perm, resource):
@@ -178,7 +192,7 @@ class Control(object):
         Returns:
             access instance: the created rule.
         """
-        func, resource = self._get_func_resource('deny', resource)
+        func, resource = self._get_user_func_resource('deny', resource)
         return func(user, perm, resource)
 
     def forget(self, user, perm, resource):
@@ -196,14 +210,109 @@ class Control(object):
             int, dict: the number of rules deleted and a dictionary with the
             number of deletions per object type (django's delete return).
         """
-        func, resource = self._get_func_resource('forget', resource)
+        func, resource = self._get_user_func_resource('forget', resource)
         return func(user, perm, resource)
 
-    def get_controls(self):
+    def authorize_group(self,
+                        group,
+                        perm,
+                        resource,
+                        save=True,
+                        skip_implicit=False):
+        """
+        Authorize access to a resource or a type of resource.
+
+        This method checks if a group has access to a resource or a type of
+        resource. Calling this method will also try to record an entry log
+        in the corresponding access attempt model.
+
+        Call will not break if there is no access attempt model. Simply,
+        nothing will be recorded.
+
+        Args:
+            group (Group): an instance of Group or a group id.
+            perm (Permission's constant): one of the permissions available
+                in Permission class.
+            resource (): an instance of one of your models, a model,
+                or a string equal to the name of a model.
+            save (bool): record an entry in access attempt model or not.
+            skip_implicit (bool): whether to skip implicit authorization.
+                It will always be skipped if you set ACCESS_CONTROL_IMPLICIT
+                setting to False.
+
+        Returns:
+            bool: group has perm on resource (or not).
+        """
+        user_access_model, group_access_model, attempt_model, resource = (
+            self._get_mapped_value(resource))
+        return getattr(group_access_model, 'authorize')(
+            group, perm, resource,
+            save=save, skip_implicit=skip_implicit,
+            attempt_model=attempt_model)
+
+    def allow_group(self, group, perm, resource):
+        """
+        Explicitly give perm to group on resource.
+
+        Args:
+            group (Group): an instance of Group or a group id.
+            perm (Permission's constant): one of the permissions available
+                in Permission class.
+            resource (): an instance of one of your models, a model,
+                or a string equal to the name of a model.
+
+        Returns:
+            access instance: the created rule.
+        """
+        func, resource = self._get_group_func_resource('allow', resource)
+        return func(group, perm, resource)
+
+    def deny_group(self, group, perm, resource):
+        """
+        Explicitly remove perm to group on resource.
+
+        Args:
+            group (Group): an instance of Group or a group id.
+            perm (Permission's constant): one of the permissions available
+                in Permission class.
+            resource (): an instance of one of your models, a model,
+                or a string equal to the name of a model.
+
+        Returns:
+            access instance: the created rule.
+        """
+        func, resource = self._get_group_func_resource('deny', resource)
+        return func(group, perm, resource)
+
+    def forget_group(self, group, perm, resource):
+        """
+        Forget any rule present between group and resource.
+
+        Args:
+            group (Group): an instance of Group or a group id.
+            perm (Permission's constant): one of the permissions available
+                in Permission class.
+            resource (): an instance of one of your models, a model,
+                or a string equal to the name of a model.
+
+        Returns:
+            int, dict: the number of rules deleted and a dictionary with the
+            number of deletions per object type (django's delete return).
+        """
+        func, resource = self._get_group_func_resource('forget', resource)
+        return func(group, perm, resource)
+
+    def get_controls(self, for_group=False):
         """
         Get the different control methods.
+
+        Args:
+            for_group (bool): get the controls for groups, not users.
 
         Returns:
             tuple: in order, authorize, allow, deny and forget.
         """
+        if for_group:
+            return (self.authorize_group, self.allow_group,
+                    self.deny_group, self.forget_group)
         return self.authorize, self.allow, self.deny, self.forget

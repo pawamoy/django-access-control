@@ -50,8 +50,8 @@ class DSM(object):
 
         Args:
             reverse (bool): if True, entities in x-axis, resources in y-axis.
-            filters (list): list of django filters to pass to a ``filter``
-                model method.
+            filters (dict): dict of django filters to pass to a
+                ``filter`` model method as kwargs.
             orders (list): list of django orders to pass to an ``order_by``
                 model method.
 
@@ -63,7 +63,7 @@ class DSM(object):
             x, y = y, x
         objects = self.access_model.objects.all()
         if filters:
-            objects = self.access_model.objects.filter(filters)
+            objects = self.access_model.objects.filter(**filters)
         if not orders:
             orders = []
         for order in orders:
@@ -213,15 +213,13 @@ class DSM(object):
             dict: a highcharts heatmap dictionary.
         """
         if implicit:
-            if not self.data_implicit:
-                self.compute_implicit(**kwargs)
+            self.compute_implicit(**kwargs)
             categories_x = self.names_x_implicit
             categories_y = self.names_y_implicit
             size_x, size_y = self.size_x_implicit, self.size_y_implicit
             data = self.data_implicit
         else:
-            if not self.data:
-                self.compute(**kwargs)
+            self.compute(**kwargs)
             categories_x, categories_y = self.names_x, self.names_y
             size_x, size_y = self.size_x, self.size_y
             data = self.data

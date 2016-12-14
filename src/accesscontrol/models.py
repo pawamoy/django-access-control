@@ -43,6 +43,8 @@ class Access(models.Model):
     Access model.
 
     Attributes:
+        entity_name (str): name of the entity.
+        resource_name (str): name of the resource.
         ignored_perms (tuple): set of permissions to ignore when checking
             implicit permissions.
         entity (int): model field to store the entity id.
@@ -51,7 +53,7 @@ class Access(models.Model):
     """
 
     entity_name = None
-    resource_name = None
+    resource_name = 'resource'
     ignored_perms = ()
 
     entity = models.PositiveIntegerField(_('User ID'))
@@ -148,7 +150,8 @@ class Access(models.Model):
         Returns:
             bool: user has perm on resource (or not).
         """
-        raise NotImplemented('Authorize method not implemented for %s' % cls)
+        raise NotImplementedError('Authorize method '
+                                  'not implemented for %s' % cls)
 
     @classmethod
     def authorize_explicit(cls,
@@ -358,7 +361,7 @@ class UserAccess(Access):
             # Else check group explicit perms
             user_model = get_user_model()
             if not isinstance(user, user_model):
-                user = user_model.get(id=user)
+                user = user_model.objects.get(id=user)
 
             for group in user.groups.all():
                 attempt.response = group_access_model.authorize_explicit(
@@ -465,6 +468,7 @@ class AccessAttempt(models.Model):
     Access attempt model.
 
     Attributes:
+        resource_name (str): name of the resource.
         user (int): model field to store the user id (if any).
         resource (int): model field to store the resource id.
         perm (str): model field to store the permission.
@@ -475,6 +479,8 @@ class AccessAttempt(models.Model):
         group (int): model field to store the group id (if any).
         group_inherited (bool): if the response was inherited from a group.
     """
+
+    resource_name = 'resource'
 
     user = models.PositiveIntegerField(_('User ID'), blank=True, null=True)
     group = models.PositiveIntegerField(_('Group ID'), blank=True, null=True)

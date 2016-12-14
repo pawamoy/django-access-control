@@ -29,7 +29,13 @@ try:
             'accesscontrol'
         ],
         SITE_ID=1,
-        MIDDLEWARE_CLASSES=()
+        MIDDLEWARE_CLASSES=(),
+
+        ACCESS_CONTROL_PERMISSION='accesscontrol.permission.Permission',
+        ACCESS_CONTROL_ALLOWED='accesscontrol.permission.allowed',
+        ACCESS_CONTROL_DENIED='accesscontrol.permission.denied',
+        ACCESS_CONTROL_IS_ALLOWED='accesscontrol.permission.is_allowed',
+        ACCESS_CONTROL_IS_DENIED='accesscontrol.permission.is_denied',
     )
 
     try:
