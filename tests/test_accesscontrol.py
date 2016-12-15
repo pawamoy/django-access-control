@@ -109,6 +109,10 @@ class MainTestCase(TestCase):
         assert 'Authorize method not implemented' in str(e.value)
 
 
+def dummy(*args, **kwargs):
+    print(args, kwargs)
+
+
 class AbstractTestCase(object):
     """Test case to mirror tests between UserAccess and GroupAccess."""
 
@@ -116,7 +120,7 @@ class AbstractTestCase(object):
     resources = []
     entity_name = ''
     model, access_model = None, None
-    authorize, allow, deny, forget = None, None, None, None
+    authorize, allow, deny, forget = dummy, dummy, dummy, dummy
 
     def test_implicit_rights(self):
         """Test implicit rights."""
