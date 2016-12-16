@@ -8,7 +8,7 @@ model in order to create design structures matrices. The matrices can then
 be converted to a highcharts dictionary.
 """
 
-from . import is_allowed, is_denied
+from . import AppSettings
 
 
 class DSM(object):
@@ -96,7 +96,7 @@ class DSM(object):
             else:
                 index_y = mem_y
 
-            matrix_data[index_y][index_x].append(obj.val)
+            matrix_data[index_y][index_x].append(obj.perm)
 
         self.data = matrix_data
         self.ids_x = [
@@ -212,6 +212,9 @@ class DSM(object):
         Returns:
             dict: a highcharts heatmap dictionary.
         """
+        is_denied = AppSettings.get_is_denied()
+        is_allowed = AppSettings.get_is_allowed()
+
         if implicit:
             self.compute_implicit(**kwargs)
             categories_x = self.names_x_implicit

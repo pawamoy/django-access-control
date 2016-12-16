@@ -15,9 +15,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
-from . import (ACCESS_CONTROL_APP_LABEL, ACCESS_CONTROL_DEFAULT_RESPONSE,
-               ACCESS_CONTROL_IMPLICIT, ACCESS_CONTROL_INHERIT_GROUP_PERMS,
-               ACCESS_CONTROL_PERMISSION, DummyAttempt, allowed, denied)
+from . import AppSettings, DummyAttempt
 
 
 # Algorithm authorize
@@ -62,13 +60,13 @@ class Access(models.Model):
     perm = models.CharField(
         verbose_name=_('Permission'),
         max_length=30,
-        choices=ACCESS_CONTROL_PERMISSION.CHOICES_ALLOW_DENY)
+        choices=AppSettings.get_permission_class().CHOICES_ALLOW_DENY)
 
     class Meta:
         """Meta class for Django."""
 
         abstract = True
-        app_label = ACCESS_CONTROL_APP_LABEL
+        app_label = AppSettings.get_app_label()
         unique_together = ('entity', 'resource', 'perm')
 
     def __str__(self):
@@ -176,9 +174,9 @@ class Access(models.Model):
         found_allow, found_deny = False, False
         for permission in cls.objects.filter(entity=entity_id,
                                              resource=resource_id):
-            if permission.perm == allowed(perm):
+            if permission.perm == AppSettings.get_allowed()(perm):
                 found_allow = True
-            elif permission.perm == denied(perm):
+            elif permission.perm == AppSettings.get_denied()(perm):
                 found_deny = True
 
         if found_deny:
@@ -211,17 +209,17 @@ class Access(models.Model):
             None: if ACCESS_CONTROL_IMPLICIT is False,
                 or perm is in ignored_perms.
         """
-        if not ACCESS_CONTROL_IMPLICIT or perm in cls.ignored_perms:
+        if not AppSettings.get_implicit() or perm in cls.ignored_perms:
             return None
 
         entity_id, resource_id = cls.entity_resource_id(entity, resource)
 
         implicit_perms = cls.implicit_perms(entity_id, resource_id)
 
-        if denied(perm) in implicit_perms:
+        if AppSettings.get_denied()(perm) in implicit_perms:
             return False
 
-        elif allowed(perm) in implicit_perms:
+        elif AppSettings.get_allowed()(perm) in implicit_perms:
             return True
 
         return None
@@ -258,14 +256,17 @@ class Access(models.Model):
         """
         entity_id, resource_id = cls.entity_resource_id(entity, resource)
         try:
-            p = cls.objects.get(entity=entity_id, perm=denied(perm),
+            p = cls.objects.get(entity=entity_id,
+                                perm=AppSettings.get_denied()(perm),
                                 resource=resource_id)
-            p.perm = allowed(perm)
+            p.perm = AppSettings.get_allowed()(perm)
             p.save()
             return p
         except cls.DoesNotExist:
             return cls.objects.create(
-                entity=entity_id, perm=allowed(perm), resource=resource_id)
+                entity=entity_id,
+                perm=AppSettings.get_allowed()(perm),
+                resource=resource_id)
 
     @classmethod
     def deny(cls, entity, perm, resource=None):
@@ -285,13 +286,17 @@ class Access(models.Model):
         entity_id, resource_id = cls.entity_resource_id(entity, resource)
         try:
             p = cls.objects.get(
-                entity=entity_id, perm=allowed(perm), resource=resource_id)
-            p.perm = denied(perm)
+                entity=entity_id,
+                perm=AppSettings.get_allowed()(perm),
+                resource=resource_id)
+            p.perm = AppSettings.get_denied()(perm)
             p.save()
             return p
         except cls.DoesNotExist:
             return cls.objects.create(
-                entity=entity_id, perm=denied(perm), resource=resource_id)
+                entity=entity_id,
+                perm=AppSettings.get_denied()(perm),
+                resource=resource_id)
 
     @classmethod
     def forget(cls, entity, perm, resource=None):
@@ -312,7 +317,8 @@ class Access(models.Model):
         entity_id, resource_id = cls.entity_resource_id(entity, resource)
         return cls.objects.filter(
             Q(entity=entity_id) & Q(resource=resource_id) & (
-                Q(perm=allowed(perm)) | Q(perm=denied(perm)))).delete()
+                Q(perm=AppSettings.get_allowed()(perm)) |
+                Q(perm=AppSettings.get_denied()(perm)))).delete()
 
 
 class UserAccess(Access):
@@ -355,7 +361,7 @@ class UserAccess(Access):
         attempt.response = cls.authorize_explicit(user_id, perm, resource_id)
 
         if (attempt.response is None and
-                ACCESS_CONTROL_INHERIT_GROUP_PERMS and
+                AppSettings.get_inherit_group_perms() and
                 group_access_model):
 
             # Else check group explicit perms
@@ -381,7 +387,7 @@ class UserAccess(Access):
                 attempt.implicit = True
 
             # Else check group implicit perms
-            elif ACCESS_CONTROL_INHERIT_GROUP_PERMS and group_access_model:
+            elif AppSettings.get_inherit_group_perms() and group_access_model:
 
                 for group in user.groups.all():
                     attempt.response = group_access_model.authorize_implicit(
@@ -395,7 +401,7 @@ class UserAccess(Access):
 
         # Else give default response
         if attempt.response is None:
-            attempt.response = ACCESS_CONTROL_DEFAULT_RESPONSE
+            attempt.response = AppSettings.get_default_response()
             attempt.default = True
 
         if save:
@@ -454,7 +460,7 @@ class GroupAccess(Access):
 
         # Else give default response
         if attempt.response is None:
-            attempt.response = ACCESS_CONTROL_DEFAULT_RESPONSE
+            attempt.response = AppSettings.get_default_response()
             attempt.default = True
 
         if save:
@@ -488,10 +494,10 @@ class AccessAttempt(models.Model):
                                            null=True)
     perm = models.CharField(verbose_name=_('Permission'),
                             max_length=30,
-                            choices=ACCESS_CONTROL_PERMISSION.CHOICES)
+                            choices=AppSettings.get_permission_class().CHOICES)
     datetime = models.DateTimeField(_('Date and time'), default=timezone.now)
     response = models.BooleanField(_('Accepted'),
-                                   default=ACCESS_CONTROL_DEFAULT_RESPONSE)
+                                   default=AppSettings.get_default_response())
     implicit = models.BooleanField(_('Implicit'), default=False)
     default = models.BooleanField(_('Default'), default=False)
     group_inherited = models.BooleanField(_('Inherited from group'),
@@ -501,7 +507,7 @@ class AccessAttempt(models.Model):
         """Meta class for Django."""
 
         abstract = True
-        app_label = ACCESS_CONTROL_APP_LABEL
+        app_label = AppSettings.get_app_label()
 
     def __str__(self):
         inherited = ''

@@ -15,22 +15,7 @@ from django.conf import settings
 
 from .permission import Permission, allowed, denied, is_allowed, is_denied
 
-__version__ = "0.2.2"
-
-ACCESS_CONTROL_APP_LABEL = getattr(settings, 'ACCESS_CONTROL_APP_LABEL',
-                                   'accesscontrol')
-ACCESS_CONTROL_PERMISSION = getattr(
-    settings, 'ACCESS_CONTROL_PERMISSION', Permission)
-ACCESS_CONTROL_IMPLICIT = getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
-ACCESS_CONTROL_DEFAULT_RESPONSE = getattr(
-    settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
-ACCESS_CONTROL_INHERIT_GROUP_PERMS = getattr(
-    settings, 'ACCESS_CONTROL_INHERIT_GROUP_PERMS', True)
-
-allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
-denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
-is_allowed = getattr(settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
-is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
+__version__ = '0.2.2'
 
 
 def _import(complete_path):
@@ -40,20 +25,80 @@ def _import(complete_path):
     return function_or_class
 
 
-if isinstance(ACCESS_CONTROL_PERMISSION, str):
-    ACCESS_CONTROL_PERMISSION = _import(ACCESS_CONTROL_PERMISSION)
+class AppSettings(object):
+    def __init__(self):
+        self.ACCESS_CONTROL_APP_LABEL = None
+        self.ACCESS_CONTROL_PERMISSION_CLASS = None
+        self.ACCESS_CONTROL_IMPLICIT = None
+        self.ACCESS_CONTROL_DEFAULT_RESPONSE = None
+        self.ACCESS_CONTROL_INHERIT_GROUP_PERMS = None
+        self.allowed = None
+        self.denied = None
+        self.is_allowed = None
+        self.is_denied = None
 
-if isinstance(allowed, str):
-    allowed = _import(allowed)
+    def load(self):
+        self.ACCESS_CONTROL_APP_LABEL = AppSettings.get_app_label()
+        self.ACCESS_CONTROL_PERMISSION_CLASS = AppSettings.get_permission_class()  # noqa
+        self.ACCESS_CONTROL_IMPLICIT = AppSettings.get_implicit()
+        self.ACCESS_CONTROL_DEFAULT_RESPONSE = AppSettings.get_default_response()  # noqa
+        self.ACCESS_CONTROL_INHERIT_GROUP_PERMS = AppSettings.get_inherit_group_perms()  # noqa
+        self.allowed = AppSettings.get_allowed()
+        self.denied = AppSettings.get_denied()
+        self.is_allowed = AppSettings.get_is_allowed()
+        self.is_denied = AppSettings.get_is_denied()
 
-if isinstance(denied, str):
-    denied = _import(denied)
+    @staticmethod
+    def get_app_label():
+        return getattr(settings, 'ACCESS_CONTROL_APP_LABEL', 'accesscontrol')
 
-if isinstance(is_allowed, str):
-    is_allowed = _import(is_allowed)
+    @staticmethod
+    def get_permission_class():
+        return getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS', Permission)
 
-if isinstance(is_denied, str):
-    is_denied = _import(is_denied)
+    @staticmethod
+    def get_implicit():
+        return getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
+
+    @staticmethod
+    def get_default_response():
+        return getattr(settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
+
+    @staticmethod
+    def get_inherit_group_perms():
+        return getattr(settings, 'ACCESS_CONTROL_INHERIT_GROUP_PERMS', True)
+
+    @staticmethod
+    def get_allowed():
+        _allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
+        if isinstance(_allowed, str):
+            _allowed = _import(_allowed)
+        return _allowed
+
+    @staticmethod
+    def get_denied():
+        _denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
+        if isinstance(_denied, str):
+            _denied = _import(_denied)
+        return _denied
+
+    @staticmethod
+    def get_is_allowed():
+        _is_allowed = getattr(
+            settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
+        if isinstance(_is_allowed, str):
+            _is_allowed = _import(_is_allowed)
+        return _is_allowed
+
+    @staticmethod
+    def get_is_denied():
+        _is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
+        if isinstance(_is_denied, str):
+            _is_denied = _import(_is_denied)
+        return _is_denied
+
+
+app_settings = AppSettings()
 
 
 class DummyAttempt(object):
@@ -110,14 +155,16 @@ class Control(object):
                     key = k
                     break
             resource = None
-        elif hasattr(resource, '__class__'):
+        else:
             key = resource.__class__
+        if key is None:
+            raise ValueError('Given resource is not a correct '
+                             'value: %s' % resource)
         access_model, group_model, attempt_model = self.control_mapping.get(
             key, (None, None, DummyAttempt))
         if access_model is None:
-            raise ValueError('Mapping between resources '
-                             'and access models does not contain '
-                             '%s' % key.__name__)
+            raise ValueError('Given resource does not match any '
+                             'mapping: %s' % key.__name__)
         return access_model, group_model, attempt_model, resource
 
     def _get_user_func_resource(self, control, resource):
