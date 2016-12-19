@@ -5,13 +5,15 @@
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 import pytest
 
 from django_fake_model import models as f
 
 from accesscontrol import (
-    Control, DummyAttempt, Permission, allowed, denied, is_allowed, is_denied)
+    AppSettings, Control, DummyAttempt, Permission,
+    allowed, denied, is_allowed, is_denied)
 from accesscontrol.dsm import DSM
 from accesscontrol.models import Access, AccessAttempt, GroupAccess, UserAccess
 
@@ -49,7 +51,7 @@ class DummyAccess(Access):
     @classmethod
     def implicit_perms(cls, entity, resource=None):
         """Always return some perms."""
-        return Permission.SEE, Permission.CHANGE
+        return allowed(Permission.SEE), denied(Permission.CHANGE)
 
 
 class FakeUser(f.FakeModel, User):
@@ -129,9 +131,46 @@ class MainTestCase(TestCase):
 
         assert DA.authorize_implicit(0, Permission.SEE) is None
 
+    def test_allowed_or_denied_implicit_perms(self):
+        """Check that permission type is respected (allowed/denied)."""
+        assert DummyAccess.authorize_implicit(0, Permission.SEE)
+        assert not DummyAccess.authorize_implicit(0, Permission.CHANGE)
+
     def test_default_implicit_perms_are_empty(self):
         """Assert no permissions is implicitly given by default."""
         assert Access.implicit_perms(0) == ()
+
+    def test_settings_are_correctly_loaded(self):
+        """Assert settings are correctly loaded."""
+        app_settings = AppSettings()
+        app_settings.load()
+
+        assert app_settings.ACCESS_CONTROL_APP_LABEL == AppSettings.get_app_label()  # noqa
+        assert app_settings.ACCESS_CONTROL_PERMISSION_CLASS == AppSettings.get_permission_class()  # noqa
+        assert app_settings.ACCESS_CONTROL_IMPLICIT == AppSettings.get_implicit()  # noqa
+        assert app_settings.ACCESS_CONTROL_DEFAULT_RESPONSE == AppSettings.get_default_response()  # noqa
+        assert app_settings.ACCESS_CONTROL_INHERIT_GROUP_PERMS == AppSettings.get_inherit_group_perms()  # noqa
+        assert app_settings.allowed == AppSettings.get_allowed()
+        assert app_settings.denied == AppSettings.get_denied()
+        assert app_settings.is_allowed == AppSettings.get_is_allowed()
+        assert app_settings.is_denied == AppSettings.get_is_denied()
+
+    @override_settings(
+        ACCESS_CONTROL_PERMISSION='accesscontrol.permission.Permission',
+        ACCESS_CONTROL_ALLOWED='accesscontrol.permission.allowed',
+        ACCESS_CONTROL_DENIED='accesscontrol.permission.denied',
+        ACCESS_CONTROL_IS_ALLOWED='accesscontrol.permission.is_allowed',
+        ACCESS_CONTROL_IS_DENIED='accesscontrol.permission.is_denied')
+    def test_settings_objects_are_correctly_imported(self):
+        """Assert that Python object is correctly imported given its path."""
+        app_settings = AppSettings()
+        app_settings.load()
+
+        assert isinstance(app_settings.ACCESS_CONTROL_PERMISSION_CLASS, type)
+        assert callable(app_settings.allowed)
+        assert callable(app_settings.is_allowed)
+        assert callable(app_settings.denied)
+        assert callable(app_settings.is_denied)
 
 
 def dummy(*args, **kwargs):
@@ -193,7 +232,8 @@ class AbstractTestCase(object):
                     assert self.authorize(entity, Permission.DELETE, resource)
                     assert self.authorize(entity, Permission.CREATE, resource)
                 else:
-                    assert not self.authorize(entity, Permission.SEE, resource)
+                    assert not self.authorize(entity, Permission.SEE,
+                                              resource)
                     assert not self.authorize(entity, Permission.CHANGE,
                                               resource)
                     assert not self.authorize(entity, Permission.DELETE,
@@ -435,6 +475,17 @@ class AbstractTestCase(object):
                 entity=self.entities[0].id, perm=denied(Permission.SEE),
                 resource=self.resources[0].id)
         assert 'matching query does not exist' in str(e.value)
+
+    def test_attempt_methods(self):
+        """Just run through the code."""
+        # FIXME: actually test the code, don't just run it
+        self.test_explicit_rights()
+
+        import random
+        attempt = random.choice(FakeResourceAccessAttempt.objects.all())
+        attempt.like_this(response=False, implicit=False,
+                          datetime__lt=timezone.now())
+        assert attempt.total() > 0
 
 
 @FakeUser.fake_me

@@ -551,8 +551,9 @@ class AccessAttempt(models.Model):
         Returns:
             queryset: filtered entries given the arguments specified.
         """
-        result = self.objects.filter(user=self.user, resource=self.resource,
-                                     perm=self.perm)
+        result = type(self).objects.filter(user=self.user,
+                                           resource=self.resource,
+                                           perm=self.perm)
         if response is not None:
             result = result.filter(response=response)
         if implicit is not None:
