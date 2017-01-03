@@ -54,7 +54,11 @@ class AppSettings(object):
 
     @staticmethod
     def get_permission_class():
-        return getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS', Permission)
+        _class = getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS',
+                         Permission)
+        if isinstance(_class, str):
+            _class = _import(_class)
+        return _class
 
     @staticmethod
     def get_implicit():
