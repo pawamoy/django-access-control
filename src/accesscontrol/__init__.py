@@ -15,7 +15,7 @@ from django.conf import settings
 
 from .permission import Permission, allowed, denied, is_allowed, is_denied
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 
 def _import(complete_path):
