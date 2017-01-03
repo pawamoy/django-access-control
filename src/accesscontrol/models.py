@@ -66,6 +66,7 @@ class Access(models.Model):
         """Meta class for Django."""
 
         abstract = True
+        # FIXME: app_label does not work :(
         app_label = AppSettings.get_app_label()
         unique_together = ('entity', 'resource', 'perm')
 
