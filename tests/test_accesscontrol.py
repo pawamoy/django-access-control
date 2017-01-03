@@ -50,7 +50,7 @@ class DummyAccess(Access):
 
     @classmethod
     def implicit_perms(cls, entity, resource=None):
-        """Always return some perms."""
+        """Return some perms (always)."""
         return allowed(Permission.SEE), denied(Permission.CHANGE)
 
 
@@ -111,6 +111,7 @@ class MainTestCase(TestCase):
         assert 'Authorize method not implemented' in str(e.value)
 
     def test_wrong_resource(self):
+        """Assert exception is raised when given wrong resource type."""
         with pytest.raises(ValueError) as e:
             control.authorize(0, 'whatever', 'NotToBe')
         assert 'not a correct value' in str(e.value)

@@ -26,7 +26,15 @@ def _import(complete_path):
 
 
 class AppSettings(object):
+    """
+    Application settings class.
+
+    This class provides static getters for each setting, and also an instance
+    ``load`` method to load every setting in an instance.
+    """
+
     def __init__(self):
+        """Init method."""
         self.ACCESS_CONTROL_APP_LABEL = None
         self.ACCESS_CONTROL_PERMISSION_CLASS = None
         self.ACCESS_CONTROL_IMPLICIT = None
@@ -38,6 +46,7 @@ class AppSettings(object):
         self.is_denied = None
 
     def load(self):
+        """Load every settings in self."""
         self.ACCESS_CONTROL_APP_LABEL = AppSettings.get_app_label()
         self.ACCESS_CONTROL_PERMISSION_CLASS = AppSettings.get_permission_class()  # noqa
         self.ACCESS_CONTROL_IMPLICIT = AppSettings.get_implicit()
@@ -50,10 +59,12 @@ class AppSettings(object):
 
     @staticmethod
     def get_app_label():
+        """Return app label setting."""
         return getattr(settings, 'ACCESS_CONTROL_APP_LABEL', 'accesscontrol')
 
     @staticmethod
     def get_permission_class():
+        """Return permission class."""
         _class = getattr(settings, 'ACCESS_CONTROL_PERMISSION_CLASS',
                          Permission)
         if isinstance(_class, str):
@@ -62,18 +73,22 @@ class AppSettings(object):
 
     @staticmethod
     def get_implicit():
+        """Return implicit setting."""
         return getattr(settings, 'ACCESS_CONTROL_IMPLICIT', True)
 
     @staticmethod
     def get_default_response():
+        """Return default response setting."""
         return getattr(settings, 'ACCESS_CONTROL_DEFAULT_RESPONSE', False)
 
     @staticmethod
     def get_inherit_group_perms():
+        """Return inherit group perms setting."""
         return getattr(settings, 'ACCESS_CONTROL_INHERIT_GROUP_PERMS', True)
 
     @staticmethod
     def get_allowed():
+        """Return allowed function."""
         _allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
         if isinstance(_allowed, str):
             _allowed = _import(_allowed)
@@ -81,6 +96,7 @@ class AppSettings(object):
 
     @staticmethod
     def get_denied():
+        """Return denied function."""
         _denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
         if isinstance(_denied, str):
             _denied = _import(_denied)
@@ -88,6 +104,7 @@ class AppSettings(object):
 
     @staticmethod
     def get_is_allowed():
+        """Return is_allowed function."""
         _is_allowed = getattr(
             settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
         if isinstance(_is_allowed, str):
@@ -96,6 +113,7 @@ class AppSettings(object):
 
     @staticmethod
     def get_is_denied():
+        """Return is_denied function."""
         _is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
         if isinstance(_is_denied, str):
             _is_denied = _import(_is_denied)
