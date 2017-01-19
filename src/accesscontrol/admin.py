@@ -9,4 +9,3 @@ class AccessControlEditAdmin(admin.ModelAdmin):
 
     def action1(self):
         pass
-
