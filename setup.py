@@ -29,7 +29,7 @@ def read(*names, **kwargs):
 setup(
     name='django-access-control',
     version='0.2.4',
-    license='MPL 2.0',
+    license='ISC',
     description='Control how users access resources in your Django project.',
     long_description='%s\n%s' % (
         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S)
@@ -48,7 +48,7 @@ setup(
         # http://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
+        'License :: OSI Approved :: ISC License (ISCL)',
         'Operating System :: Unix',
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
