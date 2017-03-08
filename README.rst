@@ -17,8 +17,8 @@ Django Access Control
     :alt: Travis-CI Build Status
     :target: https://travis-ci.org/Pawamoy/django-access-control/
 
-.. |codacy| image:: https://api.codacy.com/project/badge/Grade/REPLACE_WITH_PROJECT_ID
-    :target: https://www.codacy.com/app/Pawamoy/django-access-control/
+.. |codacy| image:: https://api.codacy.com/project/badge/Grade/8c5e685dcd2648e895e59a6b01e8cb17
+    :target: https://www.codacy.com/app/Pawamoy/django-access-control/dashboard
     :alt: Codacy Code Quality Status
 
 .. |pyup| image:: https://pyup.io/account/repos/github/pawamoy/django-access-control/shield.svg
