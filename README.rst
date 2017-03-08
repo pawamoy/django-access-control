@@ -6,7 +6,7 @@ Django Access Control
 
 
 |travis|
-|codecov|
+|codacy|
 |landscape|
 |version|
 |wheel|
@@ -18,16 +18,16 @@ Django Access Control
     :alt: Travis-CI Build Status
     :target: https://travis-ci.org/Pawamoy/django-access-control/
 
-.. |codecov| image:: https://codecov.io/github/Pawamoy/django-access-control/coverage.svg?branch=master
-    :alt: Coverage Status
-    :target: https://codecov.io/github/Pawamoy/django-access-control/
-
 .. |landscape| image:: https://landscape.io/github/Pawamoy/django-access-control/master/landscape.svg?style=flat
     :target: https://landscape.io/github/Pawamoy/django-access-control/
     :alt: Code Quality Status
 
-.. |pyup| image:: https://pyup.io/repos/github/pawamoy/django-access-control/shield.svg
-    :target: https://pyup.io/repos/github/pawamoy/django-access-control/
+.. |codacy| image:: https://api.codacy.com/project/badge/Grade/REPLACE_WITH_PROJECT_ID
+    :target: https://www.codacy.com/app/Pawamoy/django-access-control/
+    :alt: Codacy Code Quality Status
+
+.. |pyup| image:: https://pyup.io/account/repos/github/pawamoy/django-access-control/shield.svg
+    :target: https://pyup.io/account/repos/github/pawamoy/django-access-control/
     :alt: Updates
 
 .. |gitter| image:: https://badges.gitter.im/Pawamoy/django-access-control.svg
