@@ -27,7 +27,6 @@ Django Access Control
     :target: https://landscape.io/github/Pawamoy/django-access-control/
     :alt: Code Quality Status
 
-
 .. |pyup| image:: https://pyup.io/repos/github/pawamoy/django-access-control/shield.svg
     :target: https://pyup.io/repos/github/pawamoy/django-access-control/
     :alt: Updates
@@ -66,7 +65,8 @@ Installation
 Documentation
 =============
 
-https://github.com/Pawamoy/django-access-control/wiki
+http://django-access-control.readthedocs.io/en/latest/
+
 
 Development
 ===========
