@@ -31,7 +31,7 @@ default_context:
     full_name:                       'Timothee Mazzucotelli'
     github_username:                 'Pawamoy'
     gitter:                          'yes'
-    landscape:                       'yes'
+    landscape:                       'no'
     package_name:                    'accesscontrol'
     project_name:                    'Django Access Control'
     project_short_description:       'Control how users access resources in your Django project.'
