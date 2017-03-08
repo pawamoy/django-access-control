@@ -19,11 +19,11 @@ Django Access Control
     :target: https://travis-ci.org/Pawamoy/django-access-control/
 
 .. |codacy| image:: https://api.codacy.com/project/badge/Grade/REPLACE_WITH_PROJECT_ID
-    :target: https://www.codacy.com/app/Pawamoy/django-access-control/
+    :target: https://www.codacy.com/app/Pawamoy/django-access-control/dashboard
     :alt: Codacy Code Quality Status
 
-.. |pyup| image:: https://pyup.io/account/repos/github/pawamoy/django-access-control/shield.svg
-    :target: https://pyup.io/account/repos/github/pawamoy/django-access-control/
+.. |pyup| image:: https://pyup.io/repos/github/Pawamoy/django-access-control/shield.svg
+    :target: https://pyup.io/repos/github/Pawamoy/django-access-control/
     :alt: Updates
 
 .. |gitter| image:: https://badges.gitter.im/Pawamoy/django-access-control.svg
