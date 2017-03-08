@@ -57,11 +57,12 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: Implementation :: PyPy',
         'Framework :: Django',
         # 'Framework :: Django :: 1.8',
         # 'Framework :: Django :: 1.9',
         # 'Framework :: Django :: 1.10',
-        'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Utilities',
     ],
     keywords=[
