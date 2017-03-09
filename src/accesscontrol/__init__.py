@@ -35,7 +35,6 @@ class AppSettings(object):
 
     def __init__(self):
         """Init method."""
-        self.ACCESS_CONTROL_APP_LABEL = None
         self.ACCESS_CONTROL_PERMISSION_CLASS = None
         self.ACCESS_CONTROL_IMPLICIT = None
         self.ACCESS_CONTROL_DEFAULT_RESPONSE = None
@@ -47,7 +46,6 @@ class AppSettings(object):
 
     def load(self):
         """Load every settings in self."""
-        self.ACCESS_CONTROL_APP_LABEL = AppSettings.get_app_label()
         self.ACCESS_CONTROL_PERMISSION_CLASS = AppSettings.get_permission_class()  # noqa
         self.ACCESS_CONTROL_IMPLICIT = AppSettings.get_implicit()
         self.ACCESS_CONTROL_DEFAULT_RESPONSE = AppSettings.get_default_response()  # noqa
@@ -56,11 +54,6 @@ class AppSettings(object):
         self.denied = AppSettings.get_denied()
         self.is_allowed = AppSettings.get_is_allowed()
         self.is_denied = AppSettings.get_is_denied()
-
-    @staticmethod
-    def get_app_label():
-        """Return app label setting."""
-        return getattr(settings, 'ACCESS_CONTROL_APP_LABEL', 'accesscontrol')
 
     @staticmethod
     def get_permission_class():
@@ -135,6 +128,8 @@ class DummyAttempt(object):
         pass
 
 
+# TODO: shortcut authorize(actor, perm, resource)
+# and full methods in AccessRule.authorize(actor_type, actor_id, resource_type, resource_id)
 class Control(object):
     """
     Control class.
