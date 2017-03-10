@@ -116,18 +116,6 @@ class AppSettings(object):
 app_settings = AppSettings()
 
 
-class DummyAttempt(object):
-    """Dummy access attempt model that will pass init and save."""
-
-    def __init__(self, *args, **kwargs):
-        """Noop init method."""
-        pass
-
-    def save(self, *args, **kwargs):
-        """Noop save method."""
-        pass
-
-
 # TODO: shortcut authorize(actor, perm, resource)
 # and full methods in AccessRule.authorize(actor_type, actor_id, resource_type, resource_id)
 class Control(object):
