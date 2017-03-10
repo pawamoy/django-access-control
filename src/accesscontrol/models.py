@@ -37,7 +37,7 @@ from . import AppSettings
 #           If got something, return it
 #           Else, return default response.
 
-# TODO: add verbose_names, add __str__ methods
+# TODO: add __str__ methods
 # TODO: have flexible id types from app settings
 
 
@@ -391,19 +391,28 @@ class AccessHistory(models.Model):
         group_inherited (bool): if the response was inherited from a group.
     """
 
+    DEFAULT = 'default'
+    IMPLICIT = 'implicit'
+    EXPLICIT = 'explicit'
+    RESPONSE_TYPE = (
+        (DEFAULT, _('by default')),
+        (IMPLICIT, _('implicitly')),
+        (EXPLICIT, _('explicitly'))
+    )
+
     actor_type = models.CharField(_('Actor type'), max_length=255)
     actor_id = models.PositiveIntegerField(_('Actor ID'))
 
     # TODO: AppSettings.get_default_response()
     response = models.BooleanField(_('Response'), default=False)
+    response_type = models.CharField(
+        _('Response type'), max_length=10, choices=RESPONSE_TYPE)
     access_type = models.CharField(_('Access'), max_length=255)
 
     resource_type = models.CharField(_('Resource type'), max_length=255)
     resource_id = models.PositiveIntegerField(_('Resource ID'), null=True)
 
     datetime = models.DateTimeField(_('Date and time'), default=timezone.now)
-    implicit = models.BooleanField(_('Implicit'), default=False)
-    default = models.BooleanField(_('Default'), default=False)
     group = models.PositiveIntegerField(_('Inherited from group'), null=True)
 
     # TODO: update
