@@ -477,17 +477,6 @@ class AbstractTestCase(object):
                 resource=self.resources[0].id)
         assert 'matching query does not exist' in str(e.value)
 
-    def test_attempt_methods(self):
-        """Just run through the code."""
-        # FIXME: actually test the code, don't just run it
-        self.test_explicit_rights()
-
-        import random
-        attempt = random.choice(FakeResourceAccessAttempt.objects.all())
-        attempt.like_this(response=False, implicit=False,
-                          datetime__lt=timezone.now())
-        assert attempt.total() > 0
-
 
 @FakeUser.fake_me
 @FakeResource.fake_me

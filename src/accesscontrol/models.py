@@ -10,6 +10,7 @@ Models for access control.
 
 from __future__ import unicode_literals
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
@@ -37,9 +38,6 @@ from . import AppSettings
 #           If got something, return it
 #           Else, return default response.
 
-# TODO: add __str__ methods
-# TODO: have flexible id types from app settings
-
 
 class AccessRule(models.Model):
     """
@@ -58,10 +56,11 @@ class AccessRule(models.Model):
     actor_type = models.CharField(_('Actor type'), max_length=255)
     actor_id = models.PositiveIntegerField(_('Actor ID'))
 
-    # TODO: get default from app settings
-    authorized = models.BooleanField(default=False)
-    # TODO: add choices from app settings (ontology generated class of perms)
-    access_type = models.CharField(max_length=255)
+    authorized = models.BooleanField(
+        _('Authorization'), default=AppSettings.get_default_response())
+    access_type = models.CharField(
+        _('Access type'), max_length=255,
+        choices=AppSettings.get_access_type_choices())
 
     resource_type = models.CharField(_('Resource type'), max_length=255)
     resource_id = models.PositiveIntegerField(_('Resource ID'), null=True)
@@ -96,11 +95,11 @@ class AccessRule(models.Model):
         Run an explicit authorization check.
 
         Args:
-            actor (): an instance of settings.AUTH_USER_MODEL, an instance of
-                Group or a user/group id.
-            perm (Permission's constant): one of the permissions available
-                in Permission class.
-            resource (): an instance of one of your models, its id, or None.
+            actor_type (str): a string describing the type of actor.
+            actor_id (int): the actor's ID.
+            perm (str): one of the permissions available in Permission class.
+            resource_type (str): a string describing the type of resource.
+            resource_id (int): the resource's ID.
 
         Returns:
 
@@ -128,10 +127,11 @@ class AccessRule(models.Model):
         obtained through the ``implicit_perms`` method.
 
         Args:
-            actor (): an instance of settings.AUTH_USER_MODEL, an instance of
-                Group, or a user/group id.
-            perm (str): the permission to check for.
-            resource (): an instance of one of your models, its id, or None.
+            actor_type (str): a string describing the type of actor.
+            actor_id (int): the actor's ID.
+            perm (str): one of the permissions available in Permission class.
+            resource_type (str): a string describing the type of resource.
+            resource_id (int): the resource's ID.
 
         Returns:
             bool: denied(perm) or allowed(perm) found in implicit_perms().
@@ -151,21 +151,30 @@ class AccessRule(models.Model):
         return None
 
     @classmethod
-    def allow(cls, actor_type, actor_id, perm, resource_type, resource_id=None):  # noqa
+    def allow(cls,
+              user,
+              actor_type,
+              actor_id,
+              perm,
+              resource_type,
+              resource_id=None,
+              log=True):
         """
         Explicitly give perm to actor on resource.
 
         Args:
-            actor (): an instance of settings.AUTH_USER_MODEL, an instance of
-                Group, or a user/group id.
-            perm (Permission's constant): one of the permissions available
-                in Permission class.
-            resource (): an instance of one of your models, its id, or None.
+            user (User): an instance of settings.AUTH_USER_MODEL.
+            actor_type (str): a string describing the type of actor.
+            actor_id (int): the actor's ID.
+            perm (str): one of the permissions available in Permission class.
+            resource_type (str): a string describing the type of resource.
+            resource_id (int): the resource's ID.
+            log (bool): whether to record an entry in rules history.
 
         Returns:
             access instance: the created rule.
         """
-        return cls.objects.update_or_create(
+        rule, created = cls.objects.update_or_create(
             actor_type=actor_type,
             actor_id=actor_id,
             access_type=perm,
@@ -173,22 +182,39 @@ class AccessRule(models.Model):
             resource_id=resource_id,
             defaults={'authorized': True})
 
+        if log:
+            record = cls.get_history_model()(
+                user=user, action={True: RuleHistory.CREATE}.get(
+                    created, RuleHistory.UPDATE))
+            record.update_from_rule(rule)
+
+        return rule
+
     @classmethod
-    def deny(cls, actor_type, actor_id, perm, resource_type, resource_id=None):  # noqa
+    def deny(cls,
+             user,
+             actor_type,
+             actor_id,
+             perm,
+             resource_type,
+             resource_id=None,
+             log=True):
         """
         Explicitly remove perm to actor on resource.
 
         Args:
-            actor (): an instance of settings.AUTH_USER_MODEL, an instance of
-                Group, or a user/group id.
-            perm (Permission's constant): one of the permissions available
-                in Permission class.
-            resource (): an instance of one of your models, its id, or None.
+            user (User): an instance of settings.AUTH_USER_MODEL.
+            actor_type (str): a string describing the type of actor.
+            actor_id (int): the actor's ID.
+            perm (str): one of the permissions available in Permission class.
+            resource_type (str): a string describing the type of resource.
+            resource_id (int): the resource's ID.
+            log (bool): whether to record an entry in rules history.
 
         Returns:
             access instance: the created rule.
         """
-        return cls.objects.update_or_create(
+        rule, created = cls.objects.update_or_create(
             actor_type=actor_type,
             actor_id=actor_id,
             access_type=perm,
@@ -196,27 +222,54 @@ class AccessRule(models.Model):
             resource_id=resource_id,
             defaults={'authorized': False})
 
+        if log:
+            record = cls.get_history_model()(
+                user=user, action={True: RuleHistory.CREATE}.get(
+                    created, RuleHistory.UPDATE))
+            record.update_from_rule(rule)
+
+        return rule
+
     @classmethod
-    def forget(cls, actor_type, actor_id, perm, resource_type, resource_id=None):  # noqa
+    def forget(cls,
+               user,
+               actor_type,
+               actor_id,
+               perm,
+               resource_type,
+               resource_id=None,
+               log=True):
         """
         Forget any rule present between actor and resource.
 
         Args:
-            actor (): an instance of settings.AUTH_USER_MODEL, an instance of
-                Group, or a user/group id.
-            perm (Permission's constant): one of the permissions available
-                in Permission class.
-            resource (): an instance of one of your models, its id, or None.
+            user (User): an instance of settings.AUTH_USER_MODEL.
+            actor_type (str): a string describing the type of actor.
+            actor_id (int): the actor's ID.
+            perm (str): one of the permissions available in Permission class.
+            resource_type (str): a string describing the type of resource.
+            resource_id (int): the resource's ID.
+            log (bool): whether to record an entry in rules history.
 
         Returns:
             int, dict: the number of rules deleted and a dictionary with the
             number of deletions per object type (django's delete return).
         """
-        return cls.objects.filter(
-            Q(actor_type=actor_type) & Q(actor_id=actor_id) &
-            Q(resource_type=resource_type) & Q(resource_id=resource_id) &
-            Q(access_type=perm) & (Q(authorized=True) | Q(authorized=False))
-        ).delete()
+        try:
+            rule = cls.objects.get(
+                actor_type=actor_type, actor_id=actor_id,
+                resource_type=resource_type, resource_id=resource_id,
+                access_type=perm)
+
+            if log:
+                cls.get_history_model().objects.create(
+                    user=user, action=RuleHistory.DELETE,
+                    reference_id=rule.id)
+
+            rule.delete()
+            return True
+        except cls.DoesNotExist:
+            return False
 
 
 class UserAccessRule(AccessRule):
@@ -310,6 +363,10 @@ class UserAccessRule(AccessRule):
 
         return attempt.response
 
+    @classmethod
+    def get_history_model(cls):
+        return UserRuleHistory
+
 
 class GroupAccessRule(AccessRule):
     """Group access class."""
@@ -322,7 +379,7 @@ class GroupAccessRule(AccessRule):
                   resource_type,
                   resource_id,
                   skip_implicit=False,
-                  log=False):
+                  log=True):
         """
         Implementation for GroupAccessRule class.
 
@@ -373,6 +430,10 @@ class GroupAccessRule(AccessRule):
 
         return attempt.response
 
+    @classmethod
+    def get_history_model(cls):
+        return GroupRuleHistory
+
 
 class AccessHistory(models.Model):
     """
@@ -391,134 +452,147 @@ class AccessHistory(models.Model):
         group_inherited (bool): if the response was inherited from a group.
     """
 
-    DEFAULT = 'default'
-    IMPLICIT = 'implicit'
-    EXPLICIT = 'explicit'
+    DEFAULT = 'd'
+    IMPLICIT = 'i'
+    EXPLICIT = 'e'
+
+    RESPONSE_TYPE_VERBOSE = {
+        DEFAULT: 'by default',
+        IMPLICIT: 'implicitly',
+        EXPLICIT: 'explicitly'
+    }
+
     RESPONSE_TYPE = (
-        (DEFAULT, _('by default')),
-        (IMPLICIT, _('implicitly')),
-        (EXPLICIT, _('explicitly'))
+        (DEFAULT, _(RESPONSE_TYPE_VERBOSE[DEFAULT])),
+        (IMPLICIT, _(RESPONSE_TYPE_VERBOSE[IMPLICIT])),
+        (EXPLICIT, _(RESPONSE_TYPE_VERBOSE[EXPLICIT]))
     )
 
-    actor_type = models.CharField(_('Actor type'), max_length=255)
-    actor_id = models.PositiveIntegerField(_('Actor ID'))
+    actor_type = models.CharField(_('Actor type'), max_length=255, blank=True)
+    actor_id = models.PositiveIntegerField(_('Actor ID'), null=True)
 
     # TODO: AppSettings.get_default_response()
     response = models.BooleanField(_('Response'), default=False)
     response_type = models.CharField(
-        _('Response type'), max_length=10, choices=RESPONSE_TYPE)
+        _('Response type'), max_length=1, choices=RESPONSE_TYPE)
     access_type = models.CharField(_('Access'), max_length=255)
 
     resource_type = models.CharField(_('Resource type'), max_length=255)
     resource_id = models.PositiveIntegerField(_('Resource ID'), null=True)
 
     datetime = models.DateTimeField(_('Date and time'), default=timezone.now)
-    group = models.PositiveIntegerField(_('Inherited from group'), null=True)
 
-    # TODO: update
+    group_type = models.CharField(_('Group type'), max_length=255, blank=True)
+    group_id = models.PositiveIntegerField(_('Group ID'), null=True)
+
     def __str__(self):
         inherited = ''
-
-        if self.user:
-            actor_name = 'user'
-            actor = self.user
-            if self.group:
-                inherited = ' (inherited from group %s)' % self.group
+        if self.actor_type and self.group_type and self.group_id:
+            if self.actor_id:
+                actor = '%s %s' % (self.actor_type, self.actor_id)
+            else:
+                actor = self.actor_type
+            inherited = ' (inherited from %s %s)' % (
+                self.group_type, self.group_id)
+        elif self.group_type:
+            if self.group_id:
+                actor = '%s %s' % (self.group_type, self.group_id)
+            else:
+                actor = self.group_type
         else:
-            actor_name = 'group'
-            actor = self.group
+            return 'invalid: no actor & no group: %s' % self.__dict__
 
-        if self.default:
-            way = 'by default'
-        elif self.implicit:
-            way = 'implicitly'
-        else:
-            way = 'explicitly'
-
-        able = 'able' if self.response else 'unable'
-
-        string = '[%s] %s %s was %s %s to %s %s %s' % (
-            self.datetime, actor_name, actor, way,
-            able, self.perm, self.resource_name, self.resource)
-
+        authorized = 'authorized' if self.response else 'unauthorized'
+        string = '[%s] %s was %s %s to %s %s %s' % (
+            self.datetime, actor,
+            AccessHistory.RESPONSE_TYPE[str(self.response_type)],
+            authorized, self.access_type, self.resource_type, self.resource_id)
         if inherited:
             return string + inherited
-        else:
-            return string
+        return string
 
 
 class RuleHistory(models.Model):
     """Rule history model."""
 
+    rule_type = 'generic'
+
     CREATE = 'c'
     # READ = 'r'  # makes no sense here
     UPDATE = 'u'
     DELETE = 'd'
+
+    ACTIONS_VERBOSE = {
+        CREATE: 'create',
+        # READ: 'read',
+        UPDATE: 'update',
+        DELETE: 'delete'
+    }
+
     ACTIONS = (
-        CREATE, _('Create'),
-        UPDATE, _('Update'),
-        DELETE, _('Delete'),
+        CREATE, _(ACTIONS_VERBOSE[CREATE]),
+        # READ, _(ACTIONS_VERBOSE[READ]),
+        UPDATE, _(ACTIONS_VERBOSE[UPDATE]),
+        DELETE, _(ACTIONS_VERBOSE[DELETE]),
     )
 
     reference_id = models.PositiveIntegerField(_('Rule reference ID'))
     action = models.CharField(_('Action'), max_length=1, choices=ACTIONS)
     datetime = models.DateTimeField(_('Date and time'), auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        verbose_name=_('User'), related_name='rules_changes')
 
-    old_authorized = models.NullBooleanField(
-        _('Previous authorization'), default=None)
-    old_access_type = models.CharField(
-        _('Previous access type'), max_length=255, blank=True)
-    old_resource_type = models.CharField(
-        _('Previous resource type'), max_length=255, blank=True)
-    old_resource_id = models.PositiveIntegerField(
-        _('Previous resource ID'), null=True)
+    actor_type = models.CharField(_('Actor type'), max_length=255, blank=True)
+    actor_id = models.PositiveIntegerField(_('Actor ID'), null=True)
 
-    new_authorized = models.NullBooleanField(
-        _('New authorization'), default=None)
-    new_access_type = models.CharField(
-        _('New access type'), max_length=255, blank=True)
-    new_resource_type = models.CharField(
-        _('New resource type'), max_length=255, blank=True)
-    new_resource_id = models.PositiveIntegerField(
-        _('New resource ID'), null=True)
+    authorized = models.NullBooleanField(_('Authorization'), default=None)
+    access_type = models.CharField(
+        _('Access type'), max_length=255, blank=True)
+
+    resource_type = models.CharField(
+        _('Resource type'), max_length=255, blank=True)
+    resource_id = models.PositiveIntegerField(_('Resource ID'), null=True)
 
     class Meta:
         """Meta class for Django."""
 
         abstract = True
 
+    def __str__(self):
+        return '[%s] user %s has %sd %s rule <%s>' % (
+            self.datetime, self.user,
+            RuleHistory.ACTIONS_VERBOSE[str(self.action)], self.rule_type,
+            self.reference if self.reference else self.reference_id)
+
+    def update_from_rule(self, rule, save=True):
+        self.reference = rule
+        self.reference_id = rule.id
+        self.actor_type = rule.actor_type
+        self.actor_id = rule.actor_id
+        self.authorized = rule.authorized
+        self.access_type = rule.access_type
+        self.resource_type = rule.resource_type
+        self.resource_id = rule.resource_id
+        if save:
+            self.save()
+
 
 class UserRuleHistory(RuleHistory):
     """User rules history model."""
+
+    rule_type = 'user'
 
     reference = models.ForeignKey(
         UserAccessRule, on_delete=models.SET_NULL, null=True,
         verbose_name=_('Rule reference'), related_name='history')
 
-    old_user_type = models.CharField(
-        _('Previous user type'), max_length=255, blank=True)
-    old_user_id = models.PositiveIntegerField(
-        _('Previous user ID'), null=True)
-
-    new_user_type = models.CharField(
-        _('New user type'), max_length=255, blank=True)
-    new_user_id = models.PositiveIntegerField(
-        _('New user ID'), null=True)
-
 
 class GroupRuleHistory(RuleHistory):
     """Group rules history model."""
 
+    rule_type = 'group'
+
     reference = models.ForeignKey(
         GroupAccessRule, on_delete=models.SET_NULL, null=True,
         verbose_name=_('Rule reference'), related_name='history')
-
-    old_group_type = models.CharField(
-        _('Previous group type'), max_length=255, blank=True)
-    old_group_id = models.PositiveIntegerField(
-        _('Previous group ID'), null=True)
-
-    new_group_type = models.CharField(
-        _('New group type'), max_length=255, blank=True)
-    new_group_id = models.PositiveIntegerField(
-        _('New group ID'), null=True)
