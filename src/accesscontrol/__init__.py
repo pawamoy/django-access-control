@@ -13,6 +13,7 @@ import importlib
 
 from django.conf import settings
 
+from .models import UserAccessRule, GroupAccessRule
 from .permission import Permission, allowed, denied, is_allowed, is_denied
 
 __version__ = '0.2.4'
@@ -79,39 +80,6 @@ class AppSettings(object):
         """Return inherit group perms setting."""
         return getattr(settings, 'ACCESS_CONTROL_INHERIT_GROUP_PERMS', True)
 
-    @staticmethod
-    def get_allowed():
-        """Return allowed function."""
-        _allowed = getattr(settings, 'ACCESS_CONTROL_ALLOWED', allowed)
-        if isinstance(_allowed, str):
-            _allowed = _import(_allowed)
-        return _allowed
-
-    @staticmethod
-    def get_denied():
-        """Return denied function."""
-        _denied = getattr(settings, 'ACCESS_CONTROL_DENIED', denied)
-        if isinstance(_denied, str):
-            _denied = _import(_denied)
-        return _denied
-
-    @staticmethod
-    def get_is_allowed():
-        """Return is_allowed function."""
-        _is_allowed = getattr(
-            settings, 'ACCESS_CONTROL_IS_ALLOWED', is_allowed)
-        if isinstance(_is_allowed, str):
-            _is_allowed = _import(_is_allowed)
-        return _is_allowed
-
-    @staticmethod
-    def get_is_denied():
-        """Return is_denied function."""
-        _is_denied = getattr(settings, 'ACCESS_CONTROL_IS_DENIED', is_denied)
-        if isinstance(_is_denied, str):
-            _is_denied = _import(_is_denied)
-        return _is_denied
-
 
 app_settings = AppSettings()
 
@@ -139,6 +107,7 @@ class Control(object):
         }).get_controls()
     """
 
+    # TODO: update docstring
     def __init__(self, control_mapping):
         """
         Init method.
@@ -149,38 +118,21 @@ class Control(object):
         """
         self.control_mapping = control_mapping
 
-    def _get_mapped_value(self, resource):
-        key = None
-        if isinstance(resource, type):
-            key = resource
-            resource = None
-        elif isinstance(resource, str):
-            for k in self.control_mapping.keys():
-                if k.__name__ == resource:
-                    key = k
-                    break
-            resource = None
+    def _get_actor_resource(self, actor, resource):
+        actor_type = actor.__class__.__name__
+        actor_id = actor.id
+        if isinstance(resource, str):
+            resource_type = resource
+            resource_id = None
+        elif isinstance(resource, type):
+            resource_type = resource.__name__
+            resource_id = None
         else:
-            key = resource.__class__
-        if key is None:
-            raise ValueError('Given resource is not a correct '
-                             'value: %s' % resource)
-        access_model, group_model, attempt_model = self.control_mapping.get(
-            key, (None, None, DummyAttempt))
-        if access_model is None:
-            raise ValueError('Given resource does not match any '
-                             'mapping: %s' % key.__name__)
-        return access_model, group_model, attempt_model, resource
+            resource_type = resource.__class__.__name__
+            resource_id = resource.id
+        return actor_type, actor_id, resource_type, resource_id
 
-    def _get_user_func_resource(self, control, resource):
-        u, g, a, r = self._get_mapped_value(resource)
-        return getattr(u, control), r
-
-    def _get_group_func_resource(self, control, resource):
-        u, g, a, r = self._get_mapped_value(resource)
-        return getattr(g, control), r
-
-    def authorize(self, user, perm, resource, save=True, skip_implicit=False):
+    def authorize(self, user, perm, resource, skip_implicit=False, log=True):
         """
         Authorize access to a resource or a type of resource.
 
@@ -197,38 +149,38 @@ class Control(object):
                 in Permission class.
             resource (): an instance of one of your models, a model,
                 or a string equal to the name of a model.
-            save (bool): record an entry in access attempt model or not.
             skip_implicit (bool): whether to skip implicit authorization.
                 It will always be skipped if you set ACCESS_CONTROL_IMPLICIT
                 setting to False.
+            log (bool): record an entry in access attempt model or not.
 
         Returns:
             bool: user has perm on resource (or not).
         """
-        user_access_model, group_access_model, attempt_model, resource = (
-            self._get_mapped_value(resource))
-        return getattr(user_access_model, 'authorize')(
-            user, perm, resource,
-            save=save, skip_implicit=skip_implicit,
-            attempt_model=attempt_model,
-            group_access_model=group_access_model)
+        u_type, u_id, r_type, r_id = self._get_actor_resource(user, resource)
 
-    def allow(self, user, perm, resource):
+        return UserAccessRule.authorize(
+            u_type, u_id, perm, r_type, r_id,
+            skip_implicit=skip_implicit, log=log)
+
+    def allow(self, actor, perm, resource, user=None, log=True):
         """
         Explicitly give perm to user on resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL or a user id.
+            user (User): an instance of settings.AUTH_USER_MODEL.
             perm (Permission's constant): one of the permissions available
                 in Permission class.
             resource (): an instance of one of your models, a model,
                 or a string equal to the name of a model.
+            admin (User): an instance of settings.AUTH_USER_MODEL.
 
         Returns:
             access instance: the created rule.
         """
-        func, resource = self._get_user_func_resource('allow', resource)
-        return func(user, perm, resource)
+        a_type, a_id, r_type, r_id = self._get_actor_resource(actor, resource)
+        return UserAccessRule.allow(
+            a_type, a_id, perm, r_type, r_id, user=user, log=log)
 
     def deny(self, user, perm, resource):
         """

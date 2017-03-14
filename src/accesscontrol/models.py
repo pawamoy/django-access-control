@@ -145,30 +145,27 @@ class AccessRule(models.Model):
         implicit_perms = AppSettings.get_implied_rules_class().implicit_perms(
             actor_type, actor_id, resource_type, resource_id)
 
-        if perm in implicit_perms:
-            return perm.authorized
-
-        return None
+        return implicit_perms.get(perm, None)
 
     @classmethod
     def allow(cls,
-              user,
               actor_type,
               actor_id,
               perm,
               resource_type,
               resource_id=None,
+              user=None,
               log=True):
         """
         Explicitly give perm to actor on resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL.
             actor_type (str): a string describing the type of actor.
             actor_id (int): the actor's ID.
             perm (str): one of the permissions available in Permission class.
             resource_type (str): a string describing the type of resource.
             resource_id (int): the resource's ID.
+            user (User): an instance of settings.AUTH_USER_MODEL.
             log (bool): whether to record an entry in rules history.
 
         Returns:
@@ -192,23 +189,23 @@ class AccessRule(models.Model):
 
     @classmethod
     def deny(cls,
-             user,
              actor_type,
              actor_id,
              perm,
              resource_type,
              resource_id=None,
+             user=None,
              log=True):
         """
         Explicitly remove perm to actor on resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL.
             actor_type (str): a string describing the type of actor.
             actor_id (int): the actor's ID.
             perm (str): one of the permissions available in Permission class.
             resource_type (str): a string describing the type of resource.
             resource_id (int): the resource's ID.
+            user (User): an instance of settings.AUTH_USER_MODEL.
             log (bool): whether to record an entry in rules history.
 
         Returns:
@@ -232,23 +229,23 @@ class AccessRule(models.Model):
 
     @classmethod
     def forget(cls,
-               user,
                actor_type,
                actor_id,
                perm,
                resource_type,
                resource_id=None,
+               user=None,
                log=True):
         """
         Forget any rule present between actor and resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL.
             actor_type (str): a string describing the type of actor.
             actor_id (int): the actor's ID.
             perm (str): one of the permissions available in Permission class.
             resource_type (str): a string describing the type of resource.
             resource_id (int): the resource's ID.
+            user (User): an instance of settings.AUTH_USER_MODEL.
             log (bool): whether to record an entry in rules history.
 
         Returns:
@@ -471,8 +468,8 @@ class AccessHistory(models.Model):
     actor_type = models.CharField(_('Actor type'), max_length=255, blank=True)
     actor_id = models.PositiveIntegerField(_('Actor ID'), null=True)
 
-    # TODO: AppSettings.get_default_response()
-    response = models.BooleanField(_('Response'), default=False)
+    # We don't want to store false info, None says "we don't know"
+    response = models.NullBooleanField(_('Response'), default=None)
     response_type = models.CharField(
         _('Response type'), max_length=1, choices=RESPONSE_TYPE)
     access_type = models.CharField(_('Access'), max_length=255)
@@ -541,7 +538,8 @@ class RuleHistory(models.Model):
     datetime = models.DateTimeField(_('Date and time'), auto_now_add=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        verbose_name=_('User'), related_name='rules_changes')
+        verbose_name=_('User'), related_name='rules_changes',
+        null=True)
 
     actor_type = models.CharField(_('Actor type'), max_length=255, blank=True)
     actor_id = models.PositiveIntegerField(_('Actor ID'), null=True)
