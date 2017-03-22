@@ -311,7 +311,8 @@ class UserAccessRule(AccessRule):
         attempt.response = None
 
         # Check user explicit perms
-        attempt.response = cls.authorize_explicit(user_id, perm, resource_id)
+        attempt.response = cls.authorize_explicit(
+            user_type, user_id, perm, resource_type, resource_id)
 
         if (attempt.response is None and
                 AppSettings.get_inherit_group_perms()):
@@ -322,7 +323,8 @@ class UserAccessRule(AccessRule):
 
             for group in user.groups.all():
                 attempt.response = GroupAccessRule.authorize_explicit(
-                    group.id, perm, resource_id)
+                    group.__class__.name, group.id, perm,
+                    resource_type, resource_id)
 
                 if attempt.response is not None:
                     attempt.group_inherited = True
@@ -332,7 +334,7 @@ class UserAccessRule(AccessRule):
         # Else check user implicit perms
         if attempt.response is None and not skip_implicit:
             attempt.response = cls.authorize_implicit(
-                user_id, perm, resource_id)
+                user_type, user_id, perm, resource_type, resource_id)
 
             if attempt.response is not None:
                 attempt.implicit = True
@@ -340,9 +342,13 @@ class UserAccessRule(AccessRule):
             # Else check group implicit perms
             elif AppSettings.get_inherit_group_perms():
 
+                user_model = get_user_model()
+                user = user_model.objects.get(id=user_id)
+
                 for group in user.groups.all():
                     attempt.response = GroupAccessRule.authorize_implicit(
-                        user_id, perm, resource_id)
+                        group.__class__.name, group.id, perm,
+                        resource_type, resource_id)
 
                     if attempt.response is not None:
                         attempt.implicit = True

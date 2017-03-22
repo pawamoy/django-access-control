@@ -168,12 +168,12 @@ class Control(object):
         Explicitly give perm to user on resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL.
+            actor (User): an instance of settings.AUTH_USER_MODEL.
             perm (Permission's constant): one of the permissions available
                 in Permission class.
             resource (): an instance of one of your models, a model,
                 or a string equal to the name of a model.
-            admin (User): an instance of settings.AUTH_USER_MODEL.
+            user (User): an instance of settings.AUTH_USER_MODEL.
 
         Returns:
             access instance: the created rule.
@@ -182,12 +182,12 @@ class Control(object):
         return UserAccessRule.allow(
             a_type, a_id, perm, r_type, r_id, user=user, log=log)
 
-    def deny(self, user, perm, resource):
+    def deny(self, actor, perm, resource, user=None, log=True):
         """
         Explicitly remove perm to user on resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL or a user id.
+            actor (User): an instance of settings.AUTH_USER_MODEL or a user id.
             perm (Permission's constant): one of the permissions available
                 in Permission class.
             resource (): an instance of one of your models, a model,
@@ -196,15 +196,16 @@ class Control(object):
         Returns:
             access instance: the created rule.
         """
-        func, resource = self._get_user_func_resource('deny', resource)
-        return func(user, perm, resource)
+        a_type, a_id, r_type, r_id = self._get_actor_resource(actor, resource)
+        return UserAccessRule.allow(
+            a_type, a_id, perm, r_type, r_id, user=user, log=log)
 
-    def forget(self, user, perm, resource):
+    def forget(self, actor, perm, resource, user=None, log=True):
         """
         Forget any rule present between user and resource.
 
         Args:
-            user (User): an instance of settings.AUTH_USER_MODEL or a user id.
+            actor (User): an instance of settings.AUTH_USER_MODEL or a user id.
             perm (Permission's constant): one of the permissions available
                 in Permission class.
             resource (): an instance of one of your models, a model,
@@ -214,8 +215,9 @@ class Control(object):
             int, dict: the number of rules deleted and a dictionary with the
             number of deletions per object type (django's delete return).
         """
-        func, resource = self._get_user_func_resource('forget', resource)
-        return func(user, perm, resource)
+        a_type, a_id, r_type, r_id = self._get_actor_resource(actor, resource)
+        return UserAccessRule.allow(
+            a_type, a_id, perm, r_type, r_id, user=user, log=log)
 
     def authorize_group(self,
                         group,
