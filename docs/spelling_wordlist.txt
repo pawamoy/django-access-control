@@ -13,8 +13,10 @@ docstrings
 django-access-control
 accesscontrol
 Pawamoy
-Django
-Access
-Control
+django
+access
+control
 Timothee
 Mazzucotelli
+Django
+django

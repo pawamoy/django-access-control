@@ -30,10 +30,6 @@ Django Access Control
     :target: https://pyup.io/repos/github/Pawamoy/django-access-control/
     :alt: Updates
 
-.. |gitter| image:: https://badges.gitter.im/Pawamoy/django-access-control.svg
-    :target: https://gitter.im/Pawamoy/django-access-control
-    :alt: Join the chat at https://gitter.im/Pawamoy/django-access-control
-
 .. |version| image:: https://img.shields.io/pypi/v/django-access-control.svg?style=flat
     :target: https://pypi.python.org/pypi/django-access-control/
     :alt: PyPI Package latest release
@@ -41,6 +37,10 @@ Django Access Control
 .. |wheel| image:: https://img.shields.io/pypi/wheel/django-access-control.svg?style=flat
     :target: https://pypi.python.org/pypi/django-access-control/
     :alt: PyPI Wheel
+
+.. |gitter| image:: https://badges.gitter.im/Pawamoy/django-access-control.svg
+    :target: https://gitter.im/Pawamoy/django-access-control
+    :alt: Join the chat at https://gitter.im/Pawamoy/django-access-control
 
 
 .. end-badges
@@ -64,8 +64,9 @@ Installation
 Documentation
 =============
 
-http://django-access-control.readthedocs.io/en/latest/
+`On ReadTheDocs`_
 
+.. _`On ReadTheDocs`: http://django-access-control.readthedocs.io/
 
 Development
 ===========
