@@ -2,6 +2,8 @@
 Django Access Control
 =====================
 
+DEPRECATED: see https://github.com/Deavelleye/dj-CerberusAC instead.
+
 .. start-badges
 
 
